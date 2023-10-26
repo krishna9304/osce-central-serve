@@ -17,7 +17,7 @@ export class User extends AbstractDocument {
   gender: string;
 
   @Prop({ default: null })
-  dateOfbirth: string;
+  dateOfBirth: string;
 
   @Prop({ required: true })
   @IsMobilePhone('en-IN')
@@ -27,7 +27,7 @@ export class User extends AbstractDocument {
   status: string;
 
   @Prop({ default: null })
-  currentYearOfStudy: string;
+  currentYearOfStudy: number;
 
   @Prop({ default: false })
   email_verified: boolean;

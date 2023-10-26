@@ -15,10 +15,10 @@ export class CreateUserRequest {
 
   @IsString()
   @IsNotEmpty()
-  dateOfbirth: string;
+  dateOfBirth: string;
 
   @IsNotEmpty()
-  currentYearOfStudy: string;
+  currentYearOfStudy: number;
 
   phone: string;
 

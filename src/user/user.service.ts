@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
   UnprocessableEntityException,
@@ -11,9 +12,18 @@ import { CreateUserRequest } from './dto/create-user.dto';
 export class UserService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
-  async createUser(request: CreateUserRequest): Promise<User> {
+  async createUser(
+    request: any,
+    initilaUserData: Partial<User> = null,
+  ): Promise<User> {
     await this.validateCreateUserRequest(request);
-    const user = await this.usersRepository.create(request);
+    let user: User;
+    if (initilaUserData) {
+      user = await this.usersRepository.findOneAndUpdate(
+        { phone: initilaUserData.phone },
+        { ...request, status: 'active', updated_at: new Date().toISOString() },
+      );
+    } else user = await this.usersRepository.create(request);
 
     delete user.metadata;
 
@@ -22,26 +32,40 @@ export class UserService {
 
   async validate(phone: string, otp: string): Promise<User> {
     const user = await this.usersRepository.findOne({ phone });
+    if (!user.metadata || !user.metadata.otp) {
+      throw new ForbiddenException('Illegal request.');
+    }
     const otpIsValid = user.metadata.otp == otp;
 
     if (!otpIsValid) {
       throw new UnauthorizedException('Incorrect otp. Try again!');
     }
 
-    await this.usersRepository.findOneAndUpdate({ phone }, { metadata: null });
+    await this.usersRepository.findOneAndUpdate(
+      { phone },
+      {
+        phone_verified: true,
+        updated_at: new Date().toISOString(),
+        metadata: { ...user.metadata, otp: null },
+      },
+    );
     delete user.metadata;
     return user;
   }
 
   async updateMetadata(phone: string, metadata: any): Promise<void> {
-    const user = await this.usersRepository.findOne({ phone });
-    if (!user) {
-      throw new UnauthorizedException('User not found');
+    const userExists = await this.usersRepository.exists({ phone });
+    if (!userExists) {
+      await this.createUser({ phone });
     }
+    const user = await this.usersRepository.findOne({ phone });
     const prevMetadata = user.metadata;
     await this.usersRepository.findOneAndUpdate(
       { phone },
-      { metadata: { ...prevMetadata, ...metadata } },
+      {
+        updated_at: new Date().toISOString(),
+        metadata: { ...prevMetadata, ...metadata },
+      },
     );
   }
 

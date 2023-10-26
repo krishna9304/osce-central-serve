@@ -35,7 +35,7 @@ export class AuthController {
   @Get('self')
   @UseGuards(JwtAuthGuard)
   async getSelf(@CurrentUser() user: User) {
-    const res = new APIresp('User details based on token', null, 200, user);
+    const res = new APIresp('User authenticated succesfully', null, 200, user);
     return res.getResponse();
   }
 }

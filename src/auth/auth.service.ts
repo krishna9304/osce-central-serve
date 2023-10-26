@@ -9,7 +9,7 @@ import { UserService } from 'src/user/user.service';
 
 export interface TokenPayload {
   userId: string;
-  email: string;
+  phone: string;
 }
 
 @Injectable()
@@ -24,7 +24,7 @@ export class AuthService {
   async login(user: User | null, response: Response, message: string = '') {
     const tokenPayload: TokenPayload = {
       userId: user._id.toHexString(),
-      email: user.email,
+      phone: user.phone,
     };
 
     const expires = new Date();

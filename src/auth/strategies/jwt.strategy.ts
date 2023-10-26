@@ -19,11 +19,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate({ userId, email }: TokenPayload) {
+  async validate({ userId, phone }: TokenPayload) {
     try {
       return await this.userService.getUser({
         _id: new Types.ObjectId(userId),
-        email,
+        phone,
       });
     } catch (err) {
       throw new UnauthorizedException();
