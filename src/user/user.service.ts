@@ -7,10 +7,14 @@ import {
 import { UsersRepository } from './repositories/user.repository';
 import { User } from './schemas/user.schema';
 import { CreateUserRequest } from './dto/create-user.dto';
+import { AzureBlobUtil } from 'src/utils/azureblob.util';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly azureBlobUtil: AzureBlobUtil,
+  ) {}
 
   async createUser(
     request: any,
@@ -89,5 +93,23 @@ export class UserService {
         'User with similar details already exists.',
       );
     }
+  }
+
+  async updateProfile(
+    file: Express.Multer.File,
+    request: Partial<User>,
+    user: User,
+  ): Promise<User> {
+    const profilePictureBlobUrl = await this.azureBlobUtil.uploadImage(file);
+    const updatedUser = await this.usersRepository.findOneAndUpdate(
+      { _id: user._id },
+      {
+        ...request,
+        profile_picture: profilePictureBlobUrl,
+        updated_at: new Date().toISOString(),
+      },
+    );
+    delete updatedUser.metadata;
+    return updatedUser;
   }
 }

@@ -17,6 +17,9 @@ export class User extends AbstractDocument {
   gender: string;
 
   @Prop({ default: null })
+  profile_picture: string;
+
+  @Prop({ default: null })
   dateOfBirth: string;
 
   @Prop({ required: true })

@@ -9,6 +9,8 @@ export class CreateUserRequest {
   @IsNotEmpty()
   name: string;
 
+  profile_picture: string;
+
   @IsString()
   @IsNotEmpty()
   gender: string;
