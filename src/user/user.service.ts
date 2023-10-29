@@ -100,12 +100,12 @@ export class UserService {
     request: Partial<User>,
     user: User,
   ): Promise<User> {
-    const profilePictureBlobUrl = await this.azureBlobUtil.uploadImage(file);
+    if (file)
+      request.profile_picture = await this.azureBlobUtil.uploadImage(file);
     const updatedUser = await this.usersRepository.findOneAndUpdate(
       { _id: user._id },
       {
         ...request,
-        profile_picture: profilePictureBlobUrl,
         updated_at: new Date().toISOString(),
       },
     );

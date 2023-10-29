@@ -4,7 +4,7 @@ import { AuthService } from './auth.service';
 import { CurrentUser } from 'src/user/current-user.decorator';
 import { User } from 'src/user/schemas/user.schema';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { ApiResponse as APIresp } from 'src/constants/ApiResponse';
+import { ApiResponse as APIresp } from 'src/constants/apiResponse';
 
 @Controller('auth')
 export class AuthController {

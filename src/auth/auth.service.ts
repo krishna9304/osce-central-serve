@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
-import { ApiResponse } from 'src/constants/ApiResponse';
+import { ApiResponse } from 'src/constants/apiResponse';
 import { TwilioService } from 'src/twilio/twilio.service';
 import { User } from 'src/user/schemas/user.schema';
 import { UserService } from 'src/user/user.service';
