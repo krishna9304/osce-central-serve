@@ -29,6 +29,9 @@ export class User extends AbstractDocument {
   @Prop({ default: 'inactive' })
   status: string;
 
+  @Prop({ default: 'user' })
+  role: string;
+
   @Prop({ default: null })
   currentYearOfStudy: number;
 

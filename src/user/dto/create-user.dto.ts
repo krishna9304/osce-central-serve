@@ -1,8 +1,14 @@
-import { IsEmail, IsMobilePhone, IsNotEmpty, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsMobilePhone,
+  IsNotEmpty,
+  IsString,
+} from 'class-validator';
 
 export class CreateUserRequest {
-  @IsEmail()
   @IsNotEmpty()
+  @IsEmail()
   email: string;
 
   @IsString()
@@ -11,12 +17,12 @@ export class CreateUserRequest {
 
   profile_picture: string;
 
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   gender: string;
 
-  @IsString()
   @IsNotEmpty()
+  @IsDateString()
   dateOfBirth: string;
 
   @IsNotEmpty()
@@ -25,6 +31,8 @@ export class CreateUserRequest {
   phone: string;
 
   status: string;
+
+  role: string;
 
   email_verified: boolean;
 

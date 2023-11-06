@@ -23,6 +23,9 @@ export class Station extends AbstractDocument {
   @Prop({ required: true })
   characterName: string;
 
+  @Prop({ default: null })
+  characterImage: string;
+
   @Prop({ required: true })
   sex: string;
 
@@ -36,61 +39,13 @@ export class Station extends AbstractDocument {
   persona: string;
 
   @Prop({ required: true })
-  medicationHistory: string;
-
-  @Prop({ required: true })
-  familyHistory: string;
-
-  @Prop({ required: true })
-  allergies: string;
-
-  @Prop({ required: true })
-  travelHistory: string;
-
-  @Prop({ required: true })
-  occupation: string;
-
-  @Prop({ required: true })
-  socialHistory: string;
-
-  @Prop({ required: true })
-  surgicalHistory: string;
-
-  @Prop({ required: true })
-  sexualHistory: string;
-
-  @Prop({ required: true })
-  dietHistory: string;
-
-  @Prop({ required: true })
-  smokingHistory: string;
-
-  @Prop({ required: true })
-  alcoholHistory: string;
-
-  @Prop({ required: true })
-  recreationalDrugHistory: string;
-
-  @Prop({ required: true })
-  stressHistory: string;
-
-  @Prop({ required: true })
-  periodsHistory: string;
-
-  @Prop({ required: true })
-  pillHistory: string;
-
-  @Prop({ required: true })
-  pregnancyHistory: string;
-
-  @Prop({ required: true })
-  papSmearHistory: string;
-
-  @Prop({ required: true })
-  ideasConcernsExpectations: string;
+  systemPrompt: string;
 
   @Prop({ required: true })
   exampleConversations: string;
+
+  @Prop({ default: null })
+  deployedModelId: string;
 
   @Prop({ default: 'inactive' })
   status: string;
