@@ -35,7 +35,7 @@ export class StationService {
   }
 
   async updateStation(
-    stationName: string,
+    stationId: string,
     updateStationRequestData: Partial<CreateStationRequest>,
     files: {
       characterImage?: Express.Multer.File[];
@@ -54,7 +54,7 @@ export class StationService {
           );
 
       return await this.stationRepository.findOneAndUpdate(
-        { stationName },
+        { stationId },
         { ...updateStationRequestData },
       );
     } catch (error) {

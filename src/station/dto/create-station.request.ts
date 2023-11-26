@@ -1,6 +1,8 @@
 import { IsDateString, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class CreateStationRequest {
+  stationId: string;
+
   @IsNotEmpty()
   @IsString()
   stationName: string;

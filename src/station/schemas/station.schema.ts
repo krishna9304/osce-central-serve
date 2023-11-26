@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { AbstractDocument } from 'src/database/abstract.schema';
 
@@ -10,6 +11,12 @@ export interface Conversation {
 @Schema({ versionKey: false })
 export class Station extends AbstractDocument {
   _id: Types.ObjectId;
+
+  @Prop({
+    default: `station-${randomUUID().replace('-', '').slice(0, 10)}`,
+    unique: true,
+  })
+  stationId: string;
 
   @Prop({ required: true, unique: true })
   stationName: string;

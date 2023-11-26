@@ -1,11 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { IsMobilePhone } from 'class-validator';
+import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { AbstractDocument } from 'src/database/abstract.schema';
 
 @Schema({ versionKey: false })
 export class User extends AbstractDocument {
   _id: Types.ObjectId;
+
+  @Prop({
+    default: `user-${randomUUID().replace('-', '').slice(0, 10)}`,
+    unique: true,
+  })
+  userId: string;
 
   @Prop({ default: null })
   email: string;

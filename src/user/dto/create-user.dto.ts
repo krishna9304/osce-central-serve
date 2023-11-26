@@ -1,6 +1,8 @@
 import { IsDateString, IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateUserRequest {
+  userId: string;
+
   @IsNotEmpty()
   @IsEmail()
   email: string;

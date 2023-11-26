@@ -51,7 +51,7 @@ export class StationController {
     return res.getResponse();
   }
 
-  @Put('update/:stationName')
+  @Put('update/:stationId')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileFieldsInterceptor([
@@ -67,13 +67,13 @@ export class StationController {
     },
     @Body() request: Partial<CreateStationRequest>,
     @CurrentUser() user: User,
-    @Param('stationName') stationName: string,
+    @Param('stationId') stationId: string,
   ) {
     if (user.role !== 'admin') {
       throw new UnauthorizedException('Only admin can update stations');
     }
     const station = await this.stationService.updateStation(
-      stationName,
+      stationId,
       request,
       files,
     );
