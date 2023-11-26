@@ -11,7 +11,7 @@ export interface Conversation {
 export class Station extends AbstractDocument {
   _id: Types.ObjectId;
 
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   stationName: string;
 
   @Prop({ required: true })
@@ -20,7 +20,7 @@ export class Station extends AbstractDocument {
   @Prop({ required: true })
   candidateInstructions: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   characterName: string;
 
   @Prop({ default: null })
@@ -39,13 +39,19 @@ export class Station extends AbstractDocument {
   persona: string;
 
   @Prop({ required: true })
-  systemPrompt: string;
+  patientPrompt: string;
 
   @Prop({ required: true })
-  exampleConversations: string;
+  evaluatorPrompt: string;
+
+  @Prop({ required: true })
+  patientExampleConversations: string;
 
   @Prop({ default: null })
   deployedModelId: string;
+
+  @Prop({ default: null })
+  openaiJobId: string;
 
   @Prop({ default: 'inactive' })
   status: string;

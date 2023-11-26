@@ -24,7 +24,6 @@ export class CreateStationRequest {
   sex: string;
 
   @IsNotEmpty()
-  @IsNumber()
   age: number;
 
   @IsNotEmpty()
@@ -37,11 +36,17 @@ export class CreateStationRequest {
 
   @IsNotEmpty()
   @IsString()
-  systemPrompt: string;
+  patientPrompt: string;
 
-  exampleConversations: string;
+  @IsNotEmpty()
+  @IsString()
+  evaluatorPrompt: string;
+
+  patientExampleConversations: string;
 
   deployedModelId: string;
+
+  openaiJobId: string;
 
   status: string;
 

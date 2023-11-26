@@ -58,4 +58,21 @@ export class AzureBlobUtil {
       throw new Error(error);
     }
   }
+
+  async uploadTxtFile(file: Express.Multer.File) {
+    try {
+      const blobName = `${Date.now()}-${file.originalname}`;
+      const blockBlobClient = this.getBlockBlobClient(blobName);
+
+      if (!file.originalname.endsWith('.txt'))
+        throw new Error(
+          'Invalid file format for example conversations. Only .txt files are allowed.',
+        );
+
+      await blockBlobClient.uploadData(file.buffer);
+      return blockBlobClient.url;
+    } catch (error) {
+      throw new Error(error);
+    }
+  }
 }

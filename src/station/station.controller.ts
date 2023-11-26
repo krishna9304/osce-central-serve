@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Param,
   Post,
+  Put,
   UnauthorizedException,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -12,7 +14,7 @@ import { CreateStationRequest } from './dto/create-station.request';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/user/current-user.decorator';
 import { User } from 'src/user/schemas/user.schema';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiResponse } from 'src/constants/apiResponse';
 
 @Controller('station')
@@ -21,18 +23,62 @@ export class StationController {
 
   @Post('create')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('characterImage'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'characterImage', maxCount: 1 },
+      { name: 'patientExampleConversations', maxCount: 1 },
+    ]),
+  )
   async createStation(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files: {
+      characterImage?: Express.Multer.File[];
+      patientExampleConversations?: Express.Multer.File[];
+    },
     @Body() request: CreateStationRequest,
     @CurrentUser() user: User,
   ) {
     if (user.role !== 'admin') {
       throw new UnauthorizedException('Only admin can create station');
     }
-    const station = await this.stationService.createStation(request, file);
+    const station = await this.stationService.createStation(request, files);
     const res = new ApiResponse(
       'Station created successfully It is still inactive, please schedule a fine tune job to deploy the character.',
+      null,
+      200,
+      station,
+    );
+    return res.getResponse();
+  }
+
+  @Put('update/:stationName')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'characterImage', maxCount: 1 },
+      { name: 'patientExampleConversations', maxCount: 1 },
+    ]),
+  )
+  async updateStation(
+    @UploadedFiles()
+    files: {
+      characterImage?: Express.Multer.File[];
+      patientExampleConversations?: Express.Multer.File[];
+    },
+    @Body() request: Partial<CreateStationRequest>,
+    @CurrentUser() user: User,
+    @Param('stationName') stationName: string,
+  ) {
+    if (user.role !== 'admin') {
+      throw new UnauthorizedException('Only admin can update stations');
+    }
+    const station = await this.stationService.updateStation(
+      stationName,
+      request,
+      files,
+    );
+    const res = new ApiResponse(
+      'Station updated successfully.',
       null,
       200,
       station,
