@@ -3,10 +3,6 @@ import { IsDateString, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 export class CreateChatRequest {
   @IsNotEmpty()
   @IsString()
-  sessionId: string;
-
-  @IsNotEmpty()
-  @IsString()
   role: string;
 
   @IsNotEmpty()

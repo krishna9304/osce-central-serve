@@ -10,6 +10,7 @@ import { SocketGateway } from './socket/socket.gateway';
 import { TwilioModule } from './twilio/twilio.module';
 import { StationModule } from './station/station.module';
 import { ChatModule } from './chat/chat.module';
+import { SocketModule } from './socket/socket.module';
 
 @Module({
   imports: [
@@ -26,8 +27,9 @@ import { ChatModule } from './chat/chat.module';
     TwilioModule,
     StationModule,
     ChatModule,
+    SocketModule,
   ],
   controllers: [AppController],
-  providers: [AppService, ConfigService, SocketGateway],
+  providers: [AppService, ConfigService],
 })
 export class AppModule {}
