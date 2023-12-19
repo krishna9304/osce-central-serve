@@ -40,7 +40,6 @@ export class SocketGateway implements OnGatewayDisconnect {
     payload: { content: string; sessionId: string },
   ): Promise<void> {
     const { content, sessionId } = payload;
-    console.log(typeof payload, content, sessionId);
 
     const session = await this.examSessionsRepository.findOne({
       sessionId,
@@ -144,7 +143,6 @@ export class SocketGateway implements OnGatewayDisconnect {
         'OPENAI_API_KEY',
       )}`,
     };
-    console.log(history);
 
     const body = {
       messages: [
