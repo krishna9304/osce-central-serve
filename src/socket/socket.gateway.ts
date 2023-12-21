@@ -39,42 +39,62 @@ export class SocketGateway implements OnGatewayDisconnect {
     client: Socket,
     payload: { content: string; sessionId: string },
   ): Promise<void> {
-    const { content, sessionId } = payload;
+    try {
+      const { content, sessionId } = payload;
 
-    const session = await this.examSessionsRepository.findOne({
-      sessionId,
-    });
+      const sessionExists = await this.examSessionsRepository.exists({
+        sessionId,
+      });
 
-    if (!session) {
-      this.logger.log('Session not found.');
+      if (!sessionExists) {
+        this.logger.log('Session not found.');
+        client.emit('ERROR', {
+          msg: 'Session not found.',
+        });
+        return;
+      }
+
+      const session = await this.examSessionsRepository.findOne({
+        sessionId,
+      });
+
+      if (session.status !== ExamSessionStatus.ACTIVE) {
+        this.logger.log('Session is not active.');
+        client.emit('ERROR', {
+          msg: 'Session is not active.',
+        });
+        return;
+      }
+
+      const station = await this.stationsRepository.findOne({
+        stationId: session.stationId,
+      });
+
+      await this.chatsRepository.create({
+        sessionId,
+        role: 'user',
+        content,
+      } as Chat);
+
+      const fullMessage = await this.callOpenAIChatCompletionApi(
+        client,
+        content,
+        station,
+        sessionId,
+      );
+
+      await this.chatsRepository.create({
+        sessionId,
+        role: 'assistant',
+        content: fullMessage,
+      } as Chat);
+    } catch (error) {
+      client.emit('ERROR', {
+        msg: error.message,
+      });
+      console.log(error);
+      this.logger.log('Something went wrong. Please try again.');
     }
-
-    if (session.status !== ExamSessionStatus.ACTIVE) {
-      this.logger.log('Session is not active.');
-    }
-
-    const station = await this.stationsRepository.findOne({
-      stationId: session.stationId,
-    });
-
-    await this.chatsRepository.create({
-      sessionId,
-      role: 'user',
-      content,
-    } as Chat);
-
-    const fullMessage = await this.callOpenAIChatCompletionApi(
-      client,
-      content,
-      station,
-      sessionId,
-    );
-
-    await this.chatsRepository.create({
-      sessionId,
-      role: 'assistant',
-      content: fullMessage,
-    } as Chat);
   }
 
   @SubscribeMessage('REG_SOC')
@@ -181,9 +201,16 @@ export class SocketGateway implements OnGatewayDisconnect {
         });
       }
 
+      client.emit('RECEIVE_CHAT_COMPLETION', {
+        msg: 'CHAT_COMPLETION_DONE',
+      });
+
       return fullMessage.join('');
     } catch (error) {
       console.log(error);
+      client.emit('ERROR', {
+        msg: error.message,
+      });
       this.logger.log('Something went wrong. Please try again.');
     }
   }
