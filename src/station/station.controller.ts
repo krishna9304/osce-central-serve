@@ -1,87 +1,116 @@
-import {
-  Body,
-  Controller,
-  Param,
-  Post,
-  Put,
-  UnauthorizedException,
-  UploadedFiles,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { StationService } from './station.service';
-import { CreateStationRequest } from './dto/create-station.request';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/user/current-user.decorator';
 import { User } from 'src/user/schemas/user.schema';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { CreateStreamRequest } from './dto/create-stream.request';
 import { ApiResponse } from 'src/constants/apiResponse';
+import { CreateCategoryRequest } from './dto/create-category.request';
+import { CreateStationRequest } from './dto/create-station.request';
+import { CreatePatientRequest } from './dto/create-patient.request';
+import { CreateEvaluatorRequest } from './dto/create-evaluator.request';
 
 @Controller('station')
 export class StationController {
   constructor(private readonly stationService: StationService) {}
 
-  @Post('create')
+  @Post()
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'characterImage', maxCount: 1 },
-      { name: 'patientExampleConversations', maxCount: 1 },
-    ]),
-  )
   async createStation(
-    @UploadedFiles()
-    files: {
-      characterImage?: Express.Multer.File[];
-      patientExampleConversations?: Express.Multer.File[];
-    },
-    @Body() request: CreateStationRequest,
     @CurrentUser() user: User,
+    @Body() stationRequestData: CreateStationRequest,
   ) {
-    if (user.role !== 'admin') {
-      throw new UnauthorizedException('Only admin can create station');
-    }
-    const station = await this.stationService.createStation(request, files);
+    if (user.role !== 'admin')
+      throw new Error('Unauthorized action. Only admins can create stations.');
+
+    await this.stationService.createStation(stationRequestData);
+
     const res = new ApiResponse(
-      'Station created successfully It is still inactive, please schedule a fine tune job to deploy the character.',
+      'Station created successfully',
       null,
-      200,
-      station,
+      201,
+      null,
     );
     return res.getResponse();
   }
 
-  @Put('update/:stationId')
+  @Post('stream')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'characterImage', maxCount: 1 },
-      { name: 'patientExampleConversations', maxCount: 1 },
-    ]),
-  )
-  async updateStation(
-    @UploadedFiles()
-    files: {
-      characterImage?: Express.Multer.File[];
-      patientExampleConversations?: Express.Multer.File[];
-    },
-    @Body() request: Partial<CreateStationRequest>,
+  async createStream(
     @CurrentUser() user: User,
-    @Param('stationId') stationId: string,
+    @Body() streamRequestData: CreateStreamRequest,
   ) {
-    if (user.role !== 'admin') {
-      throw new UnauthorizedException('Only admin can update stations');
-    }
-    const station = await this.stationService.updateStation(
-      stationId,
-      request,
-      files,
-    );
+    if (user.role !== 'admin')
+      throw new Error('Unauthorized action. Only admins can create streams.');
+
+    await this.stationService.createStream(streamRequestData);
+
+    const res = new ApiResponse('Stream created successfully', null, 201, null);
+    return res.getResponse();
+  }
+
+  @Post('category')
+  @UseGuards(JwtAuthGuard)
+  async createCategory(
+    @CurrentUser() user: User,
+    @Body() categoryRequestData: CreateCategoryRequest,
+  ) {
+    if (user.role !== 'admin')
+      throw new Error(
+        'Unauthorized action. Only admins can create categories.',
+      );
+
+    await this.stationService.createCategory(categoryRequestData);
+
     const res = new ApiResponse(
-      'Station updated successfully.',
+      'Category created successfully',
       null,
-      200,
-      station,
+      201,
+      null,
+    );
+    return res.getResponse();
+  }
+
+  @Post('patient')
+  @UseGuards(JwtAuthGuard)
+  async createPatient(
+    @CurrentUser() user: User,
+    @Body() patientRequestData: CreatePatientRequest,
+  ) {
+    if (user.role !== 'admin')
+      throw new Error(
+        'Unauthorized action. Only admins can create categories.',
+      );
+
+    await this.stationService.createPatient(patientRequestData);
+
+    const res = new ApiResponse(
+      'Patient created successfully',
+      null,
+      201,
+      null,
+    );
+    return res.getResponse();
+  }
+
+  @Post('evaluator')
+  @UseGuards(JwtAuthGuard)
+  async createEvaluator(
+    @CurrentUser() user: User,
+    @Body() evaluatorRequestData: CreateEvaluatorRequest,
+  ) {
+    if (user.role !== 'admin')
+      throw new Error(
+        'Unauthorized action. Only admins can create categories.',
+      );
+
+    await this.stationService.createEvaluator(evaluatorRequestData);
+
+    const res = new ApiResponse(
+      'Evaluator created successfully',
+      null,
+      201,
+      null,
     );
     return res.getResponse();
   }

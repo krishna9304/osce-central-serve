@@ -4,26 +4,26 @@ import { Types } from 'mongoose';
 import { AbstractDocument } from 'src/database/abstract.schema';
 
 @Schema({ versionKey: false })
-export class Station extends AbstractDocument {
-  _id: Types.ObjectId;
+export class Evaluator extends AbstractDocument {
+  _id: Types.ObjectId;22
 
   @Prop({
-    default: `station-${randomUUID().replace('-', '').slice(0, 10)}`,
+    default: `evaluator-${randomUUID().replace('-', '').slice(0, 10)}`,
     unique: true,
   })
-  stationId: string;
+  evaluatorId: string;
 
   @Prop({ required: true, unique: true })
-  stationName: string;
+  evaluatorPrompt: string;
 
   @Prop({ required: true })
-  stationCategory: string;
+  evaluatorFormatInstructions: string;
 
   @Prop({ required: true })
-  candidateInstructions: string;
+  exampleEvaluationReport: string;
 
-  @Prop({ default: 'inactive' })
-  status: string;
+  @Prop({ required: true })
+  associatedStation: string;
 
   @Prop({ default: new Date().toISOString() })
   created_at: string;
@@ -35,4 +35,4 @@ export class Station extends AbstractDocument {
   metadata: any;
 }
 
-export const StationSchema = SchemaFactory.createForClass(Station);
+export const EvaluatorSchema = SchemaFactory.createForClass(Evaluator);

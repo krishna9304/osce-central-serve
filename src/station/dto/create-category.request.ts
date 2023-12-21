@@ -1,21 +1,19 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class CreateStationRequest {
-  stationId: string;
+export class CreateCategoryRequest {
+  categoryId: string;
 
   @IsNotEmpty()
   @IsString()
-  stationName: string;
+  categoryName: string;
 
   @IsNotEmpty()
   @IsString()
-  stationCategory: string;
+  categoryDescription: string;
 
   @IsNotEmpty()
   @IsString()
-  candidateInstructions: string;
-
-  status: string;
+  associatedStream: string;
 
   created_at: string;
 
