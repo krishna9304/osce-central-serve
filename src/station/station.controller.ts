@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Get,
+  Param,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -121,6 +124,128 @@ export class StationController {
       null,
       201,
       null,
+    );
+    return res.getResponse();
+  }
+
+  @Get('stream')
+  @UseGuards(JwtAuthGuard)
+  async getStreams(@Query('streamIds') streamIds: string | null) {
+    const streams = await this.stationService.getStreams(streamIds);
+
+    const res = new ApiResponse(
+      'Streams fetched successfully',
+      null,
+      200,
+      streams,
+    );
+    return res.getResponse();
+  }
+
+  @Get('category')
+  @UseGuards(JwtAuthGuard)
+  async getCategories(@Query('categoryIds') categoryIds: string | null) {
+    const categories = await this.stationService.getCategories(categoryIds);
+
+    const res = new ApiResponse(
+      'Categories fetched successfully',
+      null,
+      200,
+      categories,
+    );
+    return res.getResponse();
+  }
+
+  @Get('station')
+  @UseGuards(JwtAuthGuard)
+  async getStations(@Query('stationIds') stationIds: string | null) {
+    const stations = await this.stationService.getStations(stationIds);
+
+    const res = new ApiResponse(
+      'Stations fetched successfully',
+      null,
+      200,
+      stations,
+    );
+    return res.getResponse();
+  }
+
+  @Get('patient')
+  @UseGuards(JwtAuthGuard)
+  async getPatients(@Query('patientIds') patietIds: string | null) {
+    const patients = await this.stationService.getPatients(patietIds);
+
+    const res = new ApiResponse(
+      'Patients fetched successfully',
+      null,
+      200,
+      patients,
+    );
+    return res.getResponse();
+  }
+
+  @Get('evaluator')
+  @UseGuards(JwtAuthGuard)
+  async getEvaluators(@Query('evaluatorIds') evaluatorIds: string | null) {
+    const evaluators = await this.stationService.getEvaluators(evaluatorIds);
+    const res = new ApiResponse(
+      'Evaluators fetched successfully',
+      null,
+      200,
+      evaluators,
+    );
+    return res.getResponse();
+  }
+
+  @Get('list-categories/:streamId')
+  @UseGuards(JwtAuthGuard)
+  async listCategories(@Param('streamId') streamId: string) {
+    const categories = await this.stationService.listCategories(streamId);
+    const res = new ApiResponse(
+      'Categories fetched successfully',
+      null,
+      200,
+      categories,
+    );
+    return res.getResponse();
+  }
+
+  @Get('list-stations/:categoryId')
+  @UseGuards(JwtAuthGuard)
+  async listStations(@Param('categoryId') categoryId: string) {
+    const stations = await this.stationService.listStations(categoryId);
+    const res = new ApiResponse(
+      'Stations fetched successfully',
+      null,
+      200,
+      stations,
+    );
+    return res.getResponse();
+  }
+
+  @Get('patient-details/:stationId')
+  @UseGuards(JwtAuthGuard)
+  async patientDetails(@Param('stationId') stationId: string) {
+    const patientDetails = await this.stationService.patientDetails(stationId);
+    const res = new ApiResponse(
+      'Patient details fetched successfully',
+      null,
+      200,
+      patientDetails,
+    );
+    return res.getResponse();
+  }
+
+  @Get('evaluator-details/:stationId')
+  @UseGuards(JwtAuthGuard)
+  async evaluatorDetails(@Param('stationId') stationId: string) {
+    const evaluatorDetails =
+      await this.stationService.evaluatorDetails(stationId);
+    const res = new ApiResponse(
+      'Evaluator details fetched successfully',
+      null,
+      200,
+      evaluatorDetails,
     );
     return res.getResponse();
   }
