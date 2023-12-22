@@ -91,9 +91,9 @@ export class Patient extends AbstractDocument {
   exampleConversations: string;
 
   @Prop({ required: true })
-  associatedStations: string[];
+  associatedStation: string;
 
-  @Prop({ required: true })
+  @Prop({ default: null })
   additionalInstructions: string;
 
   @Prop({ default: new Date().toISOString() })

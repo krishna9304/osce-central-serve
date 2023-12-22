@@ -99,11 +99,9 @@ export class CreatePatientRequest {
 
   @IsNotEmpty()
   @IsString()
-  associatedStations: string[];
+  associatedStation: string;
 
   additionalInstructions: string;
-
-  status: string;
 
   created_at: string;
 

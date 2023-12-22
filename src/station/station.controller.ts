@@ -1,4 +1,11 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { StationService } from './station.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/user/current-user.decorator';
@@ -9,6 +16,7 @@ import { CreateCategoryRequest } from './dto/create-category.request';
 import { CreateStationRequest } from './dto/create-station.request';
 import { CreatePatientRequest } from './dto/create-patient.request';
 import { CreateEvaluatorRequest } from './dto/create-evaluator.request';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('station')
 export class StationController {
@@ -73,7 +81,9 @@ export class StationController {
 
   @Post('patient')
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('avatar'))
   async createPatient(
+    @UploadedFile() avatar: Express.Multer.File,
     @CurrentUser() user: User,
     @Body() patientRequestData: CreatePatientRequest,
   ) {
@@ -82,7 +92,7 @@ export class StationController {
         'Unauthorized action. Only admins can create categories.',
       );
 
-    await this.stationService.createPatient(patientRequestData);
+    await this.stationService.createPatient(patientRequestData, avatar);
 
     const res = new ApiResponse(
       'Patient created successfully',
