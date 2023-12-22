@@ -4,26 +4,20 @@ import { Types } from 'mongoose';
 import { AbstractDocument } from 'src/database/abstract.schema';
 
 @Schema({ versionKey: false })
-export class Station extends AbstractDocument {
+export class Stream extends AbstractDocument {
   _id: Types.ObjectId;
 
   @Prop({
-    default: `station-${randomUUID().replace('-', '').slice(0, 10)}`,
+    default: `stream-${randomUUID().replace('-', '').slice(0, 10)}`,
     unique: true,
   })
-  stationId: string;
-
-  @Prop({ required: true, unique: true })
-  stationName: string;
+  streamId: string;
 
   @Prop({ required: true })
-  stationCategory: string;
+  streamName: string;
 
   @Prop({ required: true })
-  candidateInstructions: string;
-
-  @Prop({ default: 'inactive' })
-  status: string;
+  streamDescription: string;
 
   @Prop({ default: new Date().toISOString() })
   created_at: string;
@@ -35,4 +29,4 @@ export class Station extends AbstractDocument {
   metadata: any;
 }
 
-export const StationSchema = SchemaFactory.createForClass(Station);
+export const StreamSchema = SchemaFactory.createForClass(Stream);

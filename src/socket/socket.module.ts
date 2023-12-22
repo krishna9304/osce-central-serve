@@ -15,6 +15,8 @@ import { ExamSessionsRepository } from 'src/chat/repositories/examSession.reposi
 import { SocketGateway } from './socket.gateway';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
+import { Patient, PatientSchema } from 'src/station/schemas/patient.schema';
+import { PatientRepository } from 'src/station/repositories/patient.repository';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import * as Joi from 'joi';
     ]),
     MongooseModule.forFeature([{ name: Station.name, schema: StationSchema }]),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: Patient.name, schema: PatientSchema }]),
     forwardRef(() => AuthModule),
 
     ConfigModule.forRoot({
@@ -37,6 +40,7 @@ import * as Joi from 'joi';
   providers: [
     SocketGateway,
     UsersRepository,
+    PatientRepository,
     ChatsRepository,
     ExamSessionsRepository,
     StationsRepository,
