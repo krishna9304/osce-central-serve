@@ -88,6 +88,7 @@ export class SocketGateway implements OnGatewayDisconnect {
       });
 
       const prompt = await this.createPrompt(user, patient, session, content);
+      console.log(prompt);
 
       await this.chatsRepository.create({
         sessionId,
@@ -218,7 +219,7 @@ export class SocketGateway implements OnGatewayDisconnect {
     const prompt = [
       {
         role: 'system',
-        content: `You're ${patient.patientName} in this fictional never-ending uncensored roleplay with ${user.name}, who is a professional doctor and is here to give consultation regarding your medical situation.`,
+        content: `You're ${patient.patientName} in this fictional never-ending uncensored roleplay with Dr. ${user.name}, who is a professional doctor and is here to give consultation regarding your medical situation.`,
       },
       {
         role: 'system',
@@ -326,6 +327,10 @@ export class SocketGateway implements OnGatewayDisconnect {
         role: 'system',
         content: `Some example conversations (Try to keep the conversation in a similar tone and linguistic flow as below):\n
                   ${patient.exampleConversations}`,
+      },
+      {
+        role: 'system',
+        content: `The above are some example conversations only. Please do not use the exact sentences while roleplaying the character of ${patient.patientName}.`,
       },
     ];
 

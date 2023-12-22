@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Query,
+  UnauthorizedException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -52,7 +53,9 @@ export class StationController {
     @Body() streamRequestData: CreateStreamRequest,
   ) {
     if (user.role !== 'admin')
-      throw new Error('Unauthorized action. Only admins can create streams.');
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can create streams.',
+      );
 
     await this.stationService.createStream(streamRequestData);
 
@@ -67,7 +70,7 @@ export class StationController {
     @Body() categoryRequestData: CreateCategoryRequest,
   ) {
     if (user.role !== 'admin')
-      throw new Error(
+      throw new UnauthorizedException(
         'Unauthorized action. Only admins can create categories.',
       );
 
@@ -91,7 +94,7 @@ export class StationController {
     @Body() patientRequestData: CreatePatientRequest,
   ) {
     if (user.role !== 'admin')
-      throw new Error(
+      throw new UnauthorizedException(
         'Unauthorized action. Only admins can create categories.',
       );
 
@@ -113,7 +116,7 @@ export class StationController {
     @Body() evaluatorRequestData: CreateEvaluatorRequest,
   ) {
     if (user.role !== 'admin')
-      throw new Error(
+      throw new UnauthorizedException(
         'Unauthorized action. Only admins can create categories.',
       );
 
@@ -156,7 +159,7 @@ export class StationController {
     return res.getResponse();
   }
 
-  @Get('station')
+  @Get()
   @UseGuards(JwtAuthGuard)
   async getStations(@Query('stationIds') stationIds: string | null) {
     const stations = await this.stationService.getStations(stationIds);

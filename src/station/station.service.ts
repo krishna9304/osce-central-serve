@@ -103,8 +103,10 @@ export class StationService {
           'Provided station ID is invalid and does not match our records.',
         );
 
-      const avatarUrl = await this.azureBlobUtil.uploadImage(avatar);
-      patientRequestData.avatar = avatarUrl;
+      if (avatar) {
+        const avatarUrl = await this.azureBlobUtil.uploadImage(avatar);
+        patientRequestData.avatar = avatarUrl;
+      }
 
       await this.patientRepository.create({
         ...patientRequestData,
