@@ -13,7 +13,7 @@ export class Patient extends AbstractDocument {
   _id: Types.ObjectId;
 
   @Prop({
-    default: `patient-${randomUUID().replace('-', '').slice(0, 10)}`,
+    default: null,
     unique: true,
   })
   patientId: string;
@@ -107,3 +107,8 @@ export class Patient extends AbstractDocument {
 }
 
 export const PatientSchema = SchemaFactory.createForClass(Patient);
+
+PatientSchema.pre('save', function (next) {
+  this.patientId = `patient-${randomUUID().replace('-', '').slice(0, 10)}`;
+  next();
+});

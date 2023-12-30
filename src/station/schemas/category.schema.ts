@@ -8,7 +8,7 @@ export class StationCategory extends AbstractDocument {
   _id: Types.ObjectId;
 
   @Prop({
-    default: `category-${randomUUID().replace('-', '').slice(0, 10)}`,
+    default: null,
     unique: true,
   })
   categoryId: string;
@@ -34,3 +34,8 @@ export class StationCategory extends AbstractDocument {
 
 export const StationCategorySchema =
   SchemaFactory.createForClass(StationCategory);
+
+StationCategorySchema.pre('save', function (next) {
+  this.categoryId = `category-${randomUUID().replace('-', '').slice(0, 10)}`;
+  next();
+});

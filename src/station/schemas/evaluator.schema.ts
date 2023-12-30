@@ -5,10 +5,11 @@ import { AbstractDocument } from 'src/database/abstract.schema';
 
 @Schema({ versionKey: false })
 export class Evaluator extends AbstractDocument {
-  _id: Types.ObjectId;22
+  _id: Types.ObjectId;
+  22;
 
   @Prop({
-    default: `evaluator-${randomUUID().replace('-', '').slice(0, 10)}`,
+    default: null,
     unique: true,
   })
   evaluatorId: string;
@@ -36,3 +37,8 @@ export class Evaluator extends AbstractDocument {
 }
 
 export const EvaluatorSchema = SchemaFactory.createForClass(Evaluator);
+
+EvaluatorSchema.pre('save', function (next) {
+  this.evaluatorId = `evaluator-${randomUUID().replace('-', '').slice(0, 10)}`;
+  next();
+});
