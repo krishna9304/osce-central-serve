@@ -252,4 +252,23 @@ export class StationController {
     );
     return res.getResponse();
   }
+
+  @Get('evaluation/results/:sessionId')
+  @UseGuards(JwtAuthGuard)
+  async evaluationResults(
+    @CurrentUser() user: User,
+    @Param('sessionId') sessionId: string,
+  ) {
+    const evaluationResults = await this.stationService.getEvaluationResults(
+      sessionId,
+      user,
+    );
+    const res = new ApiResponse(
+      'Evaluation results fetched successfully',
+      null,
+      200,
+      evaluationResults,
+    );
+    return res.getResponse();
+  }
 }

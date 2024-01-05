@@ -19,17 +19,28 @@ import {
 } from './schemas/category.schema';
 import { Patient, PatientSchema } from './schemas/patient.schema';
 import { Evaluator, EvaluatorSchema } from './schemas/evaluator.schema';
+import {
+  ExamSession,
+  ExamSessionSchema,
+} from 'src/chat/schemas/session.schema';
+import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
+import { Chat, ChatSchema } from 'src/chat/schemas/chat.schema';
+import { ChatsRepository } from 'src/chat/repositories/chat.repository';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Station.name, schema: StationSchema }]),
     MongooseModule.forFeature([{ name: Stream.name, schema: StreamSchema }]),
+    MongooseModule.forFeature([{ name: Chat.name, schema: ChatSchema }]),
     MongooseModule.forFeature([
       { name: StationCategory.name, schema: StationCategorySchema },
     ]),
     MongooseModule.forFeature([{ name: Patient.name, schema: PatientSchema }]),
     MongooseModule.forFeature([
       { name: Evaluator.name, schema: EvaluatorSchema },
+    ]),
+    MongooseModule.forFeature([
+      { name: ExamSession.name, schema: ExamSessionSchema },
     ]),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     forwardRef(() => AuthModule),
@@ -44,6 +55,8 @@ import { Evaluator, EvaluatorSchema } from './schemas/evaluator.schema';
     StationCategoryRepository,
     PatientRepository,
     EvaluatorRepository,
+    ExamSessionsRepository,
+    ChatsRepository,
   ],
 })
 export class StationModule {}

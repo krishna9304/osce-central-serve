@@ -32,6 +32,8 @@ export class Stream extends AbstractDocument {
 export const StreamSchema = SchemaFactory.createForClass(Stream);
 
 StreamSchema.pre('save', function (next) {
-  this.streamId = `stream-${randomUUID().replace('-', '').slice(0, 10)}`;
+  this.streamId = `${Stream.name}-${randomUUID()
+    .replace('-', '')
+    .slice(0, 10)}`;
   next();
 });

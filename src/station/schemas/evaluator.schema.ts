@@ -6,7 +6,6 @@ import { AbstractDocument } from 'src/database/abstract.schema';
 @Schema({ versionKey: false })
 export class Evaluator extends AbstractDocument {
   _id: Types.ObjectId;
-  22;
 
   @Prop({
     default: null,
@@ -14,14 +13,8 @@ export class Evaluator extends AbstractDocument {
   })
   evaluatorId: string;
 
-  @Prop({ required: true, unique: true })
-  evaluatorPrompt: string;
-
   @Prop({ required: true })
-  evaluatorFormatInstructions: string;
-
-  @Prop({ required: true })
-  exampleEvaluationReport: string;
+  clinicalChecklist: Array<string>;
 
   @Prop({ required: true })
   associatedStation: string;
@@ -39,6 +32,8 @@ export class Evaluator extends AbstractDocument {
 export const EvaluatorSchema = SchemaFactory.createForClass(Evaluator);
 
 EvaluatorSchema.pre('save', function (next) {
-  this.evaluatorId = `evaluator-${randomUUID().replace('-', '').slice(0, 10)}`;
+  this.evaluatorId = `${Evaluator.name}-${randomUUID()
+    .replace('-', '')
+    .slice(0, 10)}`;
   next();
 });

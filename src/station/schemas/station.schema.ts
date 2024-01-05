@@ -38,6 +38,8 @@ export class Station extends AbstractDocument {
 export const StationSchema = SchemaFactory.createForClass(Station);
 
 StationSchema.pre('save', function (next) {
-  this.stationId = `station-${randomUUID().replace('-', '').slice(0, 10)}`;
+  this.stationId = `${Station.name}-${randomUUID()
+    .replace('-', '')
+    .slice(0, 10)}`;
   next();
 });

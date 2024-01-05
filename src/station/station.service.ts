@@ -20,6 +20,12 @@ import { StationCategory } from './schemas/category.schema';
 import { Station } from './schemas/station.schema';
 import { Patient } from './schemas/patient.schema';
 import { Evaluator } from './schemas/evaluator.schema';
+import { ConfigService } from '@nestjs/config';
+import { getEvaluatorPrompt } from 'src/chat/constants/prompt';
+import { User } from 'src/user/schemas/user.schema';
+import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
+import { ChatsRepository } from 'src/chat/repositories/chat.repository';
+import axios from 'axios';
 
 @Injectable()
 export class StationService {
@@ -30,6 +36,9 @@ export class StationService {
     private readonly patientRepository: PatientRepository,
     private readonly evaluatorRepository: EvaluatorRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
+    private readonly configService: ConfigService,
+    private readonly examSessionsRepository: ExamSessionsRepository,
+    private readonly chatsRepository: ChatsRepository,
   ) {}
 
   async createStream(streamRequestData: CreateStreamRequest) {
@@ -330,6 +339,77 @@ export class StationService {
       console.log(error);
       throw new InternalServerErrorException(
         'Something went wrong while fetching evaluator details.',
+      );
+    }
+  }
+
+  async getEvaluationResults(sessionId: string, user: User): Promise<any> {
+    const sessionExists = await this.examSessionsRepository.exists({
+      sessionId,
+    });
+
+    if (!sessionExists)
+      throw new NotFoundException(
+        'Provided session ID is invalid and does not match our records.',
+      );
+
+    const session = await this.examSessionsRepository.findOne({
+      sessionId,
+    });
+
+    if (session.status !== 'COMPLETED')
+      throw new BadRequestException(
+        'Session is not completed yet. Please try again after some time.',
+      );
+
+    const station = await this.stationRepository.findOne({
+      stationId: session.stationId,
+    });
+
+    const patient = await this.patientRepository.findOne({
+      associatedStation: station.stationId,
+    });
+
+    const evaluator = await this.evaluatorRepository.findOne({
+      associatedStation: station.stationId,
+    });
+
+    const chats = await this.chatsRepository.find({
+      sessionId: session.sessionId,
+    });
+
+    chats.sort((a, b) => {
+      return (
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+    });
+
+    const prompt = getEvaluatorPrompt(user, patient, evaluator, chats);
+
+    const url = 'https://api.openai.com/v1/chat/completions';
+
+    const headers = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${this.configService.get<string>(
+        'OPENAI_API_KEY',
+      )}`,
+    };
+
+    const body = {
+      messages: prompt,
+      model: 'gpt-3.5-turbo-1106',
+      max_tokens: 2000,
+      temperature: 0.7,
+    };
+
+    try {
+      const response = await axios.post(url, body, { headers });
+      console.log(response.data.choices[0].message.content);
+      return response.data.choices[0].message.content;
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'Something went wrong while fetching evaluation results.',
       );
     }
   }

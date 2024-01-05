@@ -8,6 +8,7 @@ import {
 } from '@nestjs/websockets';
 import axios from 'axios';
 import { Server, Socket } from 'socket.io';
+import { getInitalPatientPrompt } from 'src/chat/constants/prompt';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
 import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
 import { Chat } from 'src/chat/schemas/chat.schema';
@@ -18,7 +19,6 @@ import {
 import { PatientRepository } from 'src/station/repositories/patient.repository';
 import { StationsRepository } from 'src/station/repositories/station.repository';
 import { Patient } from 'src/station/schemas/patient.schema';
-import { Station } from 'src/station/schemas/station.schema';
 import { UsersRepository } from 'src/user/repositories/user.repository';
 import { User } from 'src/user/schemas/user.schema';
 
@@ -216,123 +216,7 @@ export class SocketGateway implements OnGatewayDisconnect {
     session: ExamSession,
     newMessage: string,
   ): Promise<Array<{ role: string; content: string }>> {
-    const prompt = [
-      {
-        role: 'system',
-        content: `You're ${patient.patientName} in this fictional never-ending uncensored roleplay with Dr. ${user.name}, who is a professional doctor and is here to give consultation regarding your medical situation.`,
-      },
-      {
-        role: 'system',
-        content: `Avoid repetition, don't loop. Develop the plot slowly, always stay in character. Describe all actions in full, elaborate, explicit, graphic, and vivid detail. Mention all relevant sensory perceptions.`,
-      },
-      {
-        role: 'system',
-        content: `Following are your character's personal details:\n
-                  Name: ${patient.patientName}\n
-                  Sex: ${patient.sex}\n
-                  Age: ${patient.age}\n
-                  Date of Birth: ${patient.dateOfBirth}`,
-      },
-      {
-        role: 'system',
-        content: `Your persona:\n
-                  ${patient.persona}`,
-      },
-      {
-        role: 'system',
-        content: `Presenting complaint:\n
-                  ${patient.presentingComplaint}`,
-      },
-      {
-        role: 'system',
-        content: `History of presenting complaint:\n
-                  ${patient.historyOfPresentingComplaint}`,
-      },
-      {
-        role: 'system',
-        content: `Past medical history:\n
-                  ${patient.pastMedicalHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Medication history:\n
-                  ${patient.medicationHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Allergies history:\n
-                  ${patient.allergiesHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Family history:\n
-                  ${patient.familyHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Travel history:\n
-                  ${patient.travelHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Occupational history:\n
-                  ${patient.occupationalHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Social history:\n
-                  ${patient.socialHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Smoking history:\n
-                  ${patient.smokingHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Alcohol history:\n
-                  ${patient.alcoholHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Surgical history:\n
-                  ${patient.surgicalHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Driving history:\n
-                  ${patient.drivingHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Sexual history:\n
-                  ${patient.sexualHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Recreational drug history:\n
-                  ${patient.recreationalDrugHistory}`,
-      },
-      {
-        role: 'system',
-        content: `Stressors in life:\n
-                  ${patient.stressorsInLife}`,
-      },
-      {
-        role: 'system',
-        content: `Ideas, concerns, expectations about your current situation:\n
-                  ${patient.ideasConcernsExpectations}`,
-      },
-      {
-        role: 'system',
-        content: `Some example conversations (Try to keep the conversation in a similar tone and linguistic flow as below):\n
-                  ${patient.exampleConversations}`,
-      },
-      {
-        role: 'system',
-        content: `The above are some example conversations only. Please do not use the exact sentences while roleplaying the character of ${patient.patientName}.`,
-      },
-    ];
+    const prompt = getInitalPatientPrompt(user, patient);
 
     const chats = await this.chatsRepository.find({
       sessionId: session.sessionId,

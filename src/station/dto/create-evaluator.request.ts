@@ -1,23 +1,15 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsArray, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateEvaluatorRequest {
   evaluatorId: string;
 
   @IsNotEmpty()
   @IsString()
-  evaluatorPrompt: string;
-
-  @IsNotEmpty()
-  @IsString()
-  evaluatorFormatInstructions: string;
-
-  @IsNotEmpty()
-  @IsString()
-  exampleEvaluationReport: string;
-
-  @IsNotEmpty()
-  @IsString()
   associatedStation: string;
+
+  @IsNotEmpty()
+  @IsArray({ message: 'clinicalChecklist must be an array of strings' })
+  clinicalChecklist: Array<string>;
 
   created_at: string;
 

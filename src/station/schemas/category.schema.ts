@@ -36,6 +36,8 @@ export const StationCategorySchema =
   SchemaFactory.createForClass(StationCategory);
 
 StationCategorySchema.pre('save', function (next) {
-  this.categoryId = `category-${randomUUID().replace('-', '').slice(0, 10)}`;
+  this.categoryId = `${StationCategory.name}-${randomUUID()
+    .replace('-', '')
+    .slice(0, 10)}`;
   next();
 });

@@ -109,6 +109,8 @@ export class Patient extends AbstractDocument {
 export const PatientSchema = SchemaFactory.createForClass(Patient);
 
 PatientSchema.pre('save', function (next) {
-  this.patientId = `patient-${randomUUID().replace('-', '').slice(0, 10)}`;
+  this.patientId = `${Patient.name}-${randomUUID()
+    .replace('-', '')
+    .slice(0, 10)}`;
   next();
 });

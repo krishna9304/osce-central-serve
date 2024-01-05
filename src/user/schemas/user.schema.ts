@@ -9,7 +9,7 @@ export class User extends AbstractDocument {
   _id: Types.ObjectId;
 
   @Prop({
-    default: `user-${randomUUID().replace('-', '').slice(0, 10)}`,
+    default: null,
     unique: true,
   })
   userId: string;
@@ -59,3 +59,8 @@ export class User extends AbstractDocument {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+UserSchema.pre('save', function (next) {
+  this.userId = `${User.name}-${randomUUID().replace('-', '').slice(0, 10)}`;
+  next();
+});
