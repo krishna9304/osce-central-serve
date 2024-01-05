@@ -28,7 +28,7 @@ export class Patient extends AbstractDocument {
   sex: string;
 
   @Prop({ required: true })
-  age: number;
+  age: string;
 
   @Prop({ required: true })
   dateOfBirth: string;

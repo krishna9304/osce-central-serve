@@ -1,4 +1,9 @@
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsNumberString,
+  IsString,
+} from 'class-validator';
 
 export class CreatePatientRequest {
   patientId: string;
@@ -14,8 +19,8 @@ export class CreatePatientRequest {
   sex: string;
 
   @IsNotEmpty()
-  @IsNumber()
-  age: number;
+  @IsNumberString()
+  age: string;
 
   @IsNotEmpty()
   @IsString()
