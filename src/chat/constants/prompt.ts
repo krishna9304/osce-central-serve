@@ -192,7 +192,9 @@ export const getEvaluatorPrompt = (
                       9. You can emojis like ✅ or 🚫 for a checklist evaluation.\n
                       10. Do not create any new evaluation format template. Always use the one provided below.\n
                       11. Do not include the instructions in the evaluation format template in the evaluation report.\n
-                      12. Give the complete evaluation report in a single message only with all the markdown format styling.\n`,
+                      12. Give the complete evaluation report in a single message only with all the markdown format styling.\n
+                      13. Include both positive and negative feedbacks in the evaluation report.
+                      14. For negative feedbacks, use strict evaluation.\n`,
     },
     {
       role: 'system',
@@ -235,7 +237,11 @@ export const getEvaluatorPrompt = (
                 }? Describe and give feedback as an evaluator and learned medical expert):\n
                 12. Clinical checklist (Did Dr. ${
                   user.name.split(' ')[0]
-                } follow all the items from the checklist? Put a ✅ for "Yes" and a 🚫 for "No". Do not use any other emojis. Give marks as an evaluator and learned medical expert):\n
+                } follow all the items from the checklist? Put a ✅ for "Yes" if the item is performed by Dr. ${
+                  user.name.split(' ')[0]
+                } and use a 🚫 for "No" if the item is not performed by Dr. ${
+                  user.name.split(' ')[0]
+                }. Do not use any other emojis.):\n
                 ${evaluator.clinicalChecklist.map(
                   (checklist) => `    - ${checklist}\n`,
                 )}`,
