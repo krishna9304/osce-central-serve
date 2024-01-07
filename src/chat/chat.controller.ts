@@ -1,4 +1,4 @@
-import { Controller, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/user/current-user.decorator';
 import { User } from 'src/user/schemas/user.schema';
@@ -21,6 +21,19 @@ export class ChatController {
     );
 
     const res = new ApiResponse('Session started', null, 201, examSession);
+
+    return res.getResponse();
+  }
+
+  @Put('end-exam-session/:sessionId')
+  @UseGuards(JwtAuthGuard)
+  async endSession(
+    @Param('sessionId') sessionId: string,
+    @CurrentUser() user: User,
+  ) {
+    await this.chatService.endExamSession(sessionId, user);
+
+    const res = new ApiResponse('Session ended.', null, 200, null);
 
     return res.getResponse();
   }

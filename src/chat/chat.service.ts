@@ -36,4 +36,25 @@ export class ChatService {
 
     return createdExamSession;
   }
+
+  async endExamSession(sessionId: string, user: User): Promise<void> {
+    const sessionExists = await this.examSessionsRepository.exists({
+      sessionId,
+      associatedUser: user.userId,
+      status: ExamSessionStatus.ACTIVE,
+    });
+
+    if (!sessionExists) {
+      throw new BadRequestException(
+        'Session does not exist or has already been completed.',
+      );
+    }
+
+    await this.examSessionsRepository.findOneAndUpdate(
+      {
+        sessionId,
+      },
+      { status: ExamSessionStatus.COMPLETED },
+    );
+  }
 }

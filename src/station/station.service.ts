@@ -26,6 +26,7 @@ import { User } from 'src/user/schemas/user.schema';
 import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
 import axios from 'axios';
+import { ExamSessionStatus } from 'src/chat/schemas/session.schema';
 
 @Injectable()
 export class StationService {
@@ -357,7 +358,7 @@ export class StationService {
       sessionId,
     });
 
-    if (session.status !== 'COMPLETED')
+    if (session.status !== ExamSessionStatus.COMPLETED)
       throw new BadRequestException(
         'Session is not completed yet. Please try again after some time.',
       );
