@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import { ApiResponse } from 'src/constants/apiResponse';
 import { TwilioService } from 'src/twilio/twilio.service';
-import { User } from 'src/user/schemas/user.schema';
+import { TEST_USER, User } from 'src/user/schemas/user.schema';
 import { UserService } from 'src/user/user.service';
 
 export interface TokenPayload {
@@ -54,6 +54,11 @@ export class AuthService {
   }
 
   async sendOTP(phone: string): Promise<void> {
+    if (phone === TEST_USER.PHONE_NUMBER) {
+      await this.userService.updateMetadata(phone, { otp: TEST_USER.OTP });
+      return;
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await this.twilioService.sendOTP(phone, otp);
     await this.userService.updateMetadata(phone, { otp });

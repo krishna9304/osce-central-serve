@@ -4,6 +4,8 @@ import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { AbstractDocument } from 'src/database/abstract.schema';
 
+export const TEST_USER = { PHONE_NUMBER: '+910000000000', OTP: '555555' };
+
 @Schema({ versionKey: false })
 export class User extends AbstractDocument {
   _id: Types.ObjectId;
