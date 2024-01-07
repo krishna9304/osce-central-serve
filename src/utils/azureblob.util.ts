@@ -75,4 +75,16 @@ export class AzureBlobUtil {
       throw new Error(error);
     }
   }
+
+  async uploadPdfUsingBuffer(buffer: Buffer, filename: string) {
+    try {
+      const blobName = `${Date.now()}-${filename}`;
+      const blockBlobClient = this.getBlockBlobClient(blobName);
+
+      await blockBlobClient.uploadData(buffer);
+      return blockBlobClient.url;
+    } catch (error) {
+      throw new Error(error);
+    }
+  }
 }

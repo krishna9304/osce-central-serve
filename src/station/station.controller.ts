@@ -4,7 +4,6 @@ import {
   Get,
   Param,
   Post,
-  Put,
   Query,
   UnauthorizedException,
   UploadedFile,
@@ -254,21 +253,37 @@ export class StationController {
     return res.getResponse();
   }
 
-  @Get('evaluation/results/:sessionId')
+  @Get('start-evaluation/:sessionId')
   @UseGuards(JwtAuthGuard)
   async evaluationResults(
     @CurrentUser() user: User,
     @Param('sessionId') sessionId: string,
   ) {
-    const evaluationResults = await this.stationService.getEvaluationResults(
+    await this.stationService.getEvaluationResults(sessionId, user);
+    const res = new ApiResponse(
+      'Your evaluation report is getting ready. It will be available in a few minutes.',
+      null,
+      200,
+      null,
+    );
+    return res.getResponse();
+  }
+
+  @Get('evaluation-report/:sessionId')
+  @UseGuards(JwtAuthGuard)
+  async evaluationReport(
+    @Param('sessionId') sessionId: string,
+    @CurrentUser() user: User,
+  ) {
+    const report = await this.stationService.getEvaluationReport(
       sessionId,
       user,
     );
     const res = new ApiResponse(
-      'Evaluation results fetched successfully',
+      'Evaluation report fetched successfully',
       null,
       200,
-      evaluationResults,
+      report,
     );
     return res.getResponse();
   }

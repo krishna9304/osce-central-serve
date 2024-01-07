@@ -118,6 +118,7 @@ export class SocketGateway implements OnGatewayDisconnect {
   @SubscribeMessage('REG_SOC')
   handleSocRegister(client: Socket, payload: { user: string }): void {
     const user = payload.user;
+
     const existingSocket = this.userSocketMap.get(user);
 
     if (existingSocket && existingSocket !== client) {
@@ -125,6 +126,9 @@ export class SocketGateway implements OnGatewayDisconnect {
     }
 
     this.userSocketMap.set(user, client);
+    client.emit('REG_SOC_SUCCESS', {
+      msg: 'Connection established with the socket server.',
+    });
 
     this.printConnections();
   }
@@ -241,5 +245,19 @@ export class SocketGateway implements OnGatewayDisconnect {
       content: newMessage,
     });
     return prompt;
+  }
+
+  async sendEvaluationReportGenerationProgress(
+    userId: string,
+    percentage: string,
+    pdfUrl: string = null,
+  ) {
+    const client = this.userSocketMap.get(userId);
+    if (client) {
+      client.emit('EVALUATION_REPORT_GENERATION_PROGRESS', {
+        progress: percentage,
+        pdfUrl,
+      });
+    }
   }
 }

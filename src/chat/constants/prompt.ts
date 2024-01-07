@@ -1,6 +1,5 @@
 import { Evaluator } from 'src/station/schemas/evaluator.schema';
 import { Patient } from 'src/station/schemas/patient.schema';
-import { Station } from 'src/station/schemas/station.schema';
 import { User } from 'src/user/schemas/user.schema';
 import { Chat } from '../schemas/chat.schema';
 
@@ -150,30 +149,27 @@ export const getInitalPatientPrompt = (user: User, patient: Patient) => {
 };
 
 export const getEvaluatorPrompt = (
-  user: User,
+  userName: string,
   patient: Patient,
   evaluator: Evaluator,
   chats: Array<Chat>,
 ) => {
+  const userFirstName = userName.split(' ')[0];
   const evaluatorPrompt = [
     {
       role: 'system',
-      content: `You're a medical expert and have years of experience dealing with patients. You're here to evaluate the performance of Dr. ${
-        user.name.split(' ')[0]
-      } and provide a marked evaluation report based on how he/she had a conversation with a patient named ${
-        patient.patientName
-      } who came to seek help regarding his/her medical situation.`,
+      content: `You're a medical expert and have years of experience dealing with patients. You're here to evaluate the performance of Dr. ${userFirstName} and provide a marked evaluation report based on how he/she had a conversation with a patient named ${patient.patientName} who came to seek help regarding his/her medical situation.`,
     },
     {
       role: 'system',
-      content: `Following is the complete consultation conversation between Dr. ${
-        user.name.split(' ')[0]
-      } and ${patient.patientName}:\n
+      content: `Following is the complete consultation conversation between Dr. ${userFirstName} and ${
+        patient.patientName
+      }:\n
             ${chats.map(
               (chat) =>
                 `${
                   chat.role == 'user'
-                    ? 'Dr. ' + user.name.split(' ')[0]
+                    ? 'Dr. ' + userFirstName
                     : patient.patientName.split(' ')[0]
                 } ${chat.content}\n`,
             )}\n`,
@@ -202,46 +198,18 @@ export const getEvaluatorPrompt = (
     },
     {
       role: 'system',
-      content: `1. Structure of consultation (Did Dr. ${
-        user.name.split(' ')[0]
-      } kept the consultation in order and was it coherent throughout the consultation? Describe and give feedback as an evaluator and learned medical expert.)\n
-                2. Language used by the doctor (Was the language used by Dr. ${
-                  user.name.split(' ')[0]
-                } simple and clear? Describe and give feedback as an evaluator and learned medical expert.)\n
-                3. Picking up issues (Was Dr. ${
-                  user.name.split(' ')[0]
-                } able to identify the issues faced by the patient? Describe and give feedback as an evaluator and learned medical expert.)\n
-                4. Listening skills of doctor (Do Dr. ${
-                  user.name.split(' ')[0]
-                } has good listening skills and did he/she acknowledged the patient's concerns, and asked follow-up questions, and clarified the patient's statements? Describe and give feedback as an evaluator and learned medical expert.)\n
-                5. Rapport with the patient (Did Dr. ${
-                  user.name.split(' ')[0]
-                } build a good rapport with the patient and maintained a professional tone during his conversation with the patient? Describe and give feedback as an evaluator and learned medical expert)\n
-                6. Examination (Did Dr. ${
-                  user.name.split(' ')[0]
-                } mention all the relevant examinations? Describe and give feedback as an evaluator and learned medical expert)\n
-                7. Findings (Was Dr. ${
-                  user.name.split(' ')[0]
-                } able to identify and elicit all the relevant findings for this case? Describe and give feedback as an evaluator and learned medical expert)\n
-                8. Diagnosis (Was Dr. ${
-                  user.name.split(' ')[0]
-                } able to arrive at the conclusion of the situation faced by the patient? Describe and give feedback as an evaluator and learned medical expert):\n
-                9. Management (Was Dr. ${
-                  user.name.split(' ')[0]
-                } able to manage the patient properly and address his/her issues and give appropriate consultation to the patient? Describe and give feedback as an evaluator and learned medical expert):\n
-                10. Time management (Was Dr. ${
-                  user.name.split(' ')[0]
-                } able to manage the time properly and was he/she able to conclude the consultation within the time limit? Describe and give feedback as an evaluator and learned medical expert):\n
-                11. Overall performance (Overall, how was the performance of Dr. ${
-                  user.name.split(' ')[0]
-                }? Describe and give feedback as an evaluator and learned medical expert):\n
-                12. Clinical checklist (Did Dr. ${
-                  user.name.split(' ')[0]
-                } follow all the items from the checklist? Put a ✅ for "Yes" if the item is performed by Dr. ${
-                  user.name.split(' ')[0]
-                } and use a 🚫 for "No" if the item is not performed by Dr. ${
-                  user.name.split(' ')[0]
-                }. Do not use any other emojis.):\n
+      content: `1. Structure of consultation (Did Dr. ${userFirstName} kept the consultation in order and was it coherent throughout the consultation? Describe and give feedback as an evaluator and learned medical expert.)\n
+                2. Language used by the doctor (Was the language used by Dr. ${userFirstName} simple and clear? Describe and give feedback as an evaluator and learned medical expert.)\n
+                3. Picking up issues (Was Dr. ${userFirstName} able to identify the issues faced by the patient? Describe and give feedback as an evaluator and learned medical expert.)\n
+                4. Listening skills of doctor (Do Dr. ${userFirstName} has good listening skills and did he/she acknowledged the patient's concerns, and asked follow-up questions, and clarified the patient's statements? Describe and give feedback as an evaluator and learned medical expert.)\n
+                5. Rapport with the patient (Did Dr. ${userFirstName} build a good rapport with the patient and maintained a professional tone during his conversation with the patient? Describe and give feedback as an evaluator and learned medical expert)\n
+                6. Examination (Did Dr. ${userFirstName} mention all the relevant examinations? Describe and give feedback as an evaluator and learned medical expert)\n
+                7. Findings (Was Dr. ${userFirstName} able to identify and elicit all the relevant findings for this case? Describe and give feedback as an evaluator and learned medical expert)\n
+                8. Diagnosis (Was Dr. ${userFirstName} able to arrive at the conclusion of the situation faced by the patient? Describe and give feedback as an evaluator and learned medical expert):\n
+                9. Management (Was Dr. ${userFirstName} able to manage the patient properly and address his/her issues and give appropriate consultation to the patient? Describe and give feedback as an evaluator and learned medical expert):\n
+                10. Time management (Was Dr. ${userFirstName} able to manage the time properly and was he/she able to conclude the consultation within the time limit? Describe and give feedback as an evaluator and learned medical expert):\n
+                11. Overall performance (Overall, how was the performance of Dr. ${userFirstName}? Describe and give feedback as an evaluator and learned medical expert):\n
+                12. Clinical checklist (Did Dr. ${userFirstName} follow all the items from the checklist? Put a ✅ for "Yes" if the item is performed by Dr. ${userFirstName} and use a 🚫 for "No" if the item is not performed by Dr. ${userFirstName}. Do not use any other emojis.):\n
                 ${evaluator.clinicalChecklist.map(
                   (checklist) => `    - ${checklist}\n`,
                 )}`,

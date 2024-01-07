@@ -26,11 +26,18 @@ import {
 import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
 import { Chat, ChatSchema } from 'src/chat/schemas/chat.schema';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
+import { Evaluation, EvaluationSchema } from './schemas/evaluation.schema';
+import { EvaluationRepository } from './repositories/evaluation.repository';
+import { SocketModule } from 'src/socket/socket.module';
+import { SocketGateway } from 'src/socket/socket.gateway';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Station.name, schema: StationSchema }]),
     MongooseModule.forFeature([{ name: Stream.name, schema: StreamSchema }]),
+    MongooseModule.forFeature([
+      { name: Evaluation.name, schema: EvaluationSchema },
+    ]),
     MongooseModule.forFeature([{ name: Chat.name, schema: ChatSchema }]),
     MongooseModule.forFeature([
       { name: StationCategory.name, schema: StationCategorySchema },
@@ -45,6 +52,7 @@ import { ChatsRepository } from 'src/chat/repositories/chat.repository';
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     forwardRef(() => AuthModule),
     UtilModule,
+    SocketModule,
   ],
   controllers: [StationController],
   providers: [
@@ -57,6 +65,8 @@ import { ChatsRepository } from 'src/chat/repositories/chat.repository';
     EvaluatorRepository,
     ExamSessionsRepository,
     ChatsRepository,
+    EvaluationRepository,
+    SocketGateway,
   ],
 })
 export class StationModule {}

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { User } from 'src/user/schemas/user.schema';
 import { ExamSessionsRepository } from './repositories/examSession.repository';
 import { ExamSession, ExamSessionStatus } from './schemas/session.schema';
@@ -50,11 +50,15 @@ export class ChatService {
       );
     }
 
-    await this.examSessionsRepository.findOneAndUpdate(
-      {
-        sessionId,
-      },
-      { status: ExamSessionStatus.COMPLETED },
-    );
+    try {
+      await this.examSessionsRepository.findOneAndUpdate(
+        {
+          sessionId,
+        },
+        { status: ExamSessionStatus.COMPLETED },
+      );
+    } catch (error) {
+      throw new InternalServerErrorException("Something went wrong. Coundn't end session.")
+    }
   }
 }

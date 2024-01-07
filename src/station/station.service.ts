@@ -27,6 +27,11 @@ import { ExamSessionsRepository } from 'src/chat/repositories/examSession.reposi
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
 import axios from 'axios';
 import { ExamSessionStatus } from 'src/chat/schemas/session.schema';
+import { Converter } from 'showdown';
+import { generatePdf } from 'html-pdf-node';
+import { EvaluationRepository } from './repositories/evaluation.repository';
+import { Evaluation } from './schemas/evaluation.schema';
+import { SocketGateway } from 'src/socket/socket.gateway';
 
 @Injectable()
 export class StationService {
@@ -40,6 +45,8 @@ export class StationService {
     private readonly configService: ConfigService,
     private readonly examSessionsRepository: ExamSessionsRepository,
     private readonly chatsRepository: ChatsRepository,
+    private readonly evaluationRepository: EvaluationRepository,
+    private readonly socketGateway: SocketGateway,
   ) {}
 
   async createStream(streamRequestData: CreateStreamRequest) {
@@ -55,17 +62,16 @@ export class StationService {
     }
   }
   async createCategory(categoryRequestData: CreateCategoryRequest) {
+    const { associatedStream } = categoryRequestData;
+    const streamExists = await this.streamRepository.exists({
+      streamId: associatedStream,
+    });
+
+    if (!streamExists)
+      throw new NotFoundException(
+        'Provided stream ID is invalid and does not match our records.',
+      );
     try {
-      const { associatedStream } = categoryRequestData;
-      const streamExists = await this.streamRepository.exists({
-        streamId: associatedStream,
-      });
-
-      if (!streamExists)
-        throw new NotFoundException(
-          'Provided stream ID is invalid and does not match our records.',
-        );
-
       await this.stationCategoryRepository.create({
         ...categoryRequestData,
       } as StationCategory);
@@ -77,17 +83,16 @@ export class StationService {
     }
   }
   async createStation(stationRequestData: CreateStationRequest) {
+    const { stationCategory } = stationRequestData;
+    const categoryExists = await this.stationCategoryRepository.exists({
+      categoryId: stationCategory,
+    });
+
+    if (!categoryExists)
+      throw new NotFoundException(
+        'Provided category ID is invalid and does not match our records.',
+      );
     try {
-      const { stationCategory } = stationRequestData;
-      const categoryExists = await this.stationCategoryRepository.exists({
-        categoryId: stationCategory,
-      });
-
-      if (!categoryExists)
-        throw new NotFoundException(
-          'Provided category ID is invalid and does not match our records.',
-        );
-
       await this.stationRepository.create({
         ...stationRequestData,
       } as Station);
@@ -102,17 +107,17 @@ export class StationService {
     patientRequestData: CreatePatientRequest,
     avatar: Express.Multer.File,
   ) {
+    const { associatedStation } = patientRequestData;
+    const stationExists = await this.stationRepository.exists({
+      stationId: associatedStation,
+    });
+
+    if (!stationExists)
+      throw new NotFoundException(
+        'Provided station ID is invalid and does not match our records.',
+      );
+
     try {
-      const { associatedStation } = patientRequestData;
-      const stationExists = await this.stationRepository.exists({
-        stationId: associatedStation,
-      });
-
-      if (!stationExists)
-        throw new NotFoundException(
-          'Provided station ID is invalid and does not match our records.',
-        );
-
       if (avatar) {
         const avatarUrl = await this.azureBlobUtil.uploadImage(avatar);
         patientRequestData.avatar = avatarUrl;
@@ -129,18 +134,17 @@ export class StationService {
     }
   }
   async createEvaluator(evaluatorRequestData: CreateEvaluatorRequest) {
+    const { associatedStation } = evaluatorRequestData;
+
+    const stationExists = await this.stationRepository.exists({
+      stationId: associatedStation,
+    });
+
+    if (!stationExists)
+      throw new NotFoundException(
+        'Provided station ID is invalid and does not match our records.',
+      );
     try {
-      const { associatedStation } = evaluatorRequestData;
-
-      const stationExists = await this.stationRepository.exists({
-        stationId: associatedStation,
-      });
-
-      if (!stationExists)
-        throw new NotFoundException(
-          'Provided station ID is invalid and does not match our records.',
-        );
-
       await this.evaluatorRepository.create({
         ...evaluatorRequestData,
       } as Evaluator);
@@ -249,16 +253,15 @@ export class StationService {
   }
 
   async listCategories(streamId: string): Promise<StationCategory[]> {
+    const streamExists = await this.streamRepository.exists({
+      streamId,
+    });
+
+    if (!streamExists)
+      throw new NotFoundException(
+        'Provided stream ID is invalid and does not match our records.',
+      );
     try {
-      const streamExists = await this.streamRepository.exists({
-        streamId,
-      });
-
-      if (!streamExists)
-        throw new NotFoundException(
-          'Provided stream ID is invalid and does not match our records.',
-        );
-
       const categories = await this.stationCategoryRepository.find({
         associatedStream: streamId,
       });
@@ -273,16 +276,15 @@ export class StationService {
   }
 
   async listStations(categoryId: string): Promise<Station[]> {
+    const categoryExists = await this.stationCategoryRepository.exists({
+      categoryId,
+    });
+
+    if (!categoryExists)
+      throw new NotFoundException(
+        'Provided category ID is invalid and does not match our records.',
+      );
     try {
-      const categoryExists = await this.stationCategoryRepository.exists({
-        categoryId,
-      });
-
-      if (!categoryExists)
-        throw new NotFoundException(
-          'Provided category ID is invalid and does not match our records.',
-        );
-
       const stations = await this.stationRepository.find({
         stationCategory: categoryId,
       });
@@ -297,16 +299,16 @@ export class StationService {
   }
 
   async patientDetails(stationId: string): Promise<Patient> {
+    const stationExists = await this.stationRepository.exists({
+      stationId,
+    });
+
+    if (!stationExists)
+      throw new NotFoundException(
+        'Provided station ID is invalid and does not match our records.',
+      );
+
     try {
-      const stationExists = await this.stationRepository.exists({
-        stationId,
-      });
-
-      if (!stationExists)
-        throw new NotFoundException(
-          'Provided station ID is invalid and does not match our records.',
-        );
-
       const patient = await this.patientRepository.findOne({
         associatedStation: stationId,
       });
@@ -321,16 +323,15 @@ export class StationService {
   }
 
   async evaluatorDetails(stationId: string): Promise<Evaluator> {
+    const stationExists = await this.stationRepository.exists({
+      stationId,
+    });
+
+    if (!stationExists)
+      throw new NotFoundException(
+        'Provided station ID is invalid and does not match our records.',
+      );
     try {
-      const stationExists = await this.stationRepository.exists({
-        stationId,
-      });
-
-      if (!stationExists)
-        throw new NotFoundException(
-          'Provided station ID is invalid and does not match our records.',
-        );
-
       const evaluator = await this.evaluatorRepository.findOne({
         associatedStation: stationId,
       });
@@ -344,7 +345,7 @@ export class StationService {
     }
   }
 
-  async getEvaluationResults(sessionId: string, user: User): Promise<any> {
+  async getEvaluationResults(sessionId: string, user: User): Promise<void> {
     const sessionExists = await this.examSessionsRepository.exists({
       sessionId,
     });
@@ -363,20 +364,44 @@ export class StationService {
         'Session is not completed yet. Please try again after some time.',
       );
 
-    const station = await this.stationRepository.findOne({
-      stationId: session.stationId,
+    const evaluationExists = await this.evaluationRepository.exists({
+      associatedSession: sessionId,
     });
 
+    if (evaluationExists)
+      throw new BadRequestException(
+        'Evaluation report is already generated for this session.',
+      );
+
+    this.prepareEvaluationResultsInBackgrond(
+      session.sessionId,
+      session.stationId,
+      user.userId,
+      user.name,
+    );
+  }
+
+  async prepareEvaluationResultsInBackgrond(
+    sessionId: string,
+    stationId: string,
+    userId: string,
+    userName: string,
+  ): Promise<void> {
+    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '10%');
+
+    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '12%');
     const patient = await this.patientRepository.findOne({
-      associatedStation: station.stationId,
+      associatedStation: stationId,
     });
 
+    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '14%');
     const evaluator = await this.evaluatorRepository.findOne({
-      associatedStation: station.stationId,
+      associatedStation: stationId,
     });
 
+    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '16%');
     const chats = await this.chatsRepository.find({
-      sessionId: session.sessionId,
+      sessionId: sessionId,
     });
 
     chats.sort((a, b) => {
@@ -385,8 +410,10 @@ export class StationService {
       );
     });
 
-    const prompt = getEvaluatorPrompt(user, patient, evaluator, chats);
+    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '30%');
+    const prompt = getEvaluatorPrompt(userName, patient, evaluator, chats);
 
+    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '40%');
     const url = 'https://api.openai.com/v1/chat/completions';
 
     const headers = {
@@ -405,13 +432,96 @@ export class StationService {
 
     try {
       const response = await axios.post(url, body, { headers });
-      console.log(response.data.choices[0].message.content);
-      return response.data.choices[0].message.content;
+      const markdownResponse: string = response.data.choices[0].message.content;
+
+      this.socketGateway.sendEvaluationReportGenerationProgress(userId, '70%');
+      const converter = new Converter({ emoji: true, tasklists: true });
+
+      this.socketGateway.sendEvaluationReportGenerationProgress(userId, '80%');
+      const htmlText = converter.makeHtml(markdownResponse);
+
+      this.socketGateway.sendEvaluationReportGenerationProgress(userId, '85%');
+      generatePdf(
+        { content: htmlText },
+        { format: 'A4' },
+        async (err, buffer: Buffer) => {
+          if (err)
+            throw new Error('Something went wrong while generating PDF.');
+
+          this.socketGateway.sendEvaluationReportGenerationProgress(
+            userId,
+            '90%',
+          );
+          const filename = `${stationId}-${sessionId}.pdf`;
+          const uploadedUrl = await this.azureBlobUtil.uploadPdfUsingBuffer(
+            buffer,
+            filename,
+          );
+
+          this.socketGateway.sendEvaluationReportGenerationProgress(
+            userId,
+            '97%',
+          );
+          await this.evaluationRepository.create({
+            associatedSession: sessionId,
+            evaluationReportPdf: uploadedUrl,
+            totalMarks: 100,
+          } as Evaluation);
+          this.socketGateway.sendEvaluationReportGenerationProgress(
+            userId,
+            '100%',
+            uploadedUrl,
+          );
+        },
+      );
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException(
         'Something went wrong while fetching evaluation results.',
       );
     }
+  }
+
+  async getEvaluationReport(
+    sessionId: string,
+    user: User,
+  ): Promise<Evaluation> {
+    const sessionExists = await this.examSessionsRepository.exists({
+      sessionId,
+    });
+
+    if (!sessionExists)
+      throw new NotFoundException(
+        'Provided session ID is invalid and does not match our records.',
+      );
+
+    const session = await this.examSessionsRepository.findOne({
+      sessionId,
+    });
+
+    if (session.associatedUser !== user.userId)
+      throw new BadRequestException(
+        'You are not authorized to access this resource.',
+      );
+
+    if (session.status !== ExamSessionStatus.COMPLETED)
+      throw new BadRequestException(
+        'Session is not completed yet. Please try again after some time.',
+      );
+
+    const evaluationExists = await this.evaluationRepository.exists({
+      associatedSession: sessionId,
+    });
+
+    if (!evaluationExists)
+      throw new BadRequestException(
+        'Evaluation report is not generated for this session yet.',
+      );
+
+    const evaluation = await this.evaluationRepository.findOne({
+      associatedSession: sessionId,
+    });
+
+    return evaluation;
   }
 }
