@@ -29,7 +29,9 @@ import { ChatsRepository } from 'src/chat/repositories/chat.repository';
 import { Evaluation, EvaluationSchema } from './schemas/evaluation.schema';
 import { EvaluationRepository } from './repositories/evaluation.repository';
 import { SocketModule } from 'src/socket/socket.module';
+import { SocketService } from 'src/socket/socket.service';
 import { SocketGateway } from 'src/socket/socket.gateway';
+import { Socket } from 'socket.io';
 
 @Module({
   imports: [
@@ -52,7 +54,7 @@ import { SocketGateway } from 'src/socket/socket.gateway';
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     forwardRef(() => AuthModule),
     UtilModule,
-    SocketModule,
+    forwardRef(() => SocketModule),
   ],
   controllers: [StationController],
   providers: [
@@ -67,6 +69,7 @@ import { SocketGateway } from 'src/socket/socket.gateway';
     ChatsRepository,
     EvaluationRepository,
     SocketGateway,
+    SocketService,
   ],
 })
 export class StationModule {}

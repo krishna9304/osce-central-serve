@@ -32,6 +32,7 @@ import { generatePdf } from 'html-pdf-node';
 import { EvaluationRepository } from './repositories/evaluation.repository';
 import { Evaluation } from './schemas/evaluation.schema';
 import { SocketGateway } from 'src/socket/socket.gateway';
+import { SocketService } from 'src/socket/socket.service';
 
 @Injectable()
 export class StationService {
@@ -46,7 +47,7 @@ export class StationService {
     private readonly examSessionsRepository: ExamSessionsRepository,
     private readonly chatsRepository: ChatsRepository,
     private readonly evaluationRepository: EvaluationRepository,
-    private readonly socketGateway: SocketGateway,
+    private readonly socketService: SocketService,
   ) {}
 
   async createStream(streamRequestData: CreateStreamRequest) {
@@ -387,19 +388,19 @@ export class StationService {
     userId: string,
     userName: string,
   ): Promise<void> {
-    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '10%');
+    this.socketService.updateReportGenerationProgress(userId, '10%');
 
-    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '12%');
+    this.socketService.updateReportGenerationProgress(userId, '12%');
     const patient = await this.patientRepository.findOne({
       associatedStation: stationId,
     });
 
-    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '14%');
+    this.socketService.updateReportGenerationProgress(userId, '14%');
     const evaluator = await this.evaluatorRepository.findOne({
       associatedStation: stationId,
     });
 
-    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '16%');
+    this.socketService.updateReportGenerationProgress(userId, '16%');
     const chats = await this.chatsRepository.find({
       sessionId: sessionId,
     });
@@ -410,10 +411,10 @@ export class StationService {
       );
     });
 
-    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '30%');
+    this.socketService.updateReportGenerationProgress(userId, '30%');
     const prompt = getEvaluatorPrompt(userName, patient, evaluator, chats);
 
-    this.socketGateway.sendEvaluationReportGenerationProgress(userId, '40%');
+    this.socketService.updateReportGenerationProgress(userId, '40%');
     const url = 'https://api.openai.com/v1/chat/completions';
 
     const headers = {
@@ -434,13 +435,13 @@ export class StationService {
       const response = await axios.post(url, body, { headers });
       const markdownResponse: string = response.data.choices[0].message.content;
 
-      this.socketGateway.sendEvaluationReportGenerationProgress(userId, '70%');
+      this.socketService.updateReportGenerationProgress(userId, '70%');
       const converter = new Converter({ emoji: true, tasklists: true });
 
-      this.socketGateway.sendEvaluationReportGenerationProgress(userId, '80%');
+      this.socketService.updateReportGenerationProgress(userId, '80%');
       const htmlText = converter.makeHtml(markdownResponse);
 
-      this.socketGateway.sendEvaluationReportGenerationProgress(userId, '85%');
+      this.socketService.updateReportGenerationProgress(userId, '85%');
       generatePdf(
         { content: htmlText },
         { format: 'A4' },
@@ -448,7 +449,7 @@ export class StationService {
           if (err)
             throw new Error('Something went wrong while generating PDF.');
 
-          this.socketGateway.sendEvaluationReportGenerationProgress(
+          this.socketService.updateReportGenerationProgress(
             userId,
             '90%',
           );
@@ -458,7 +459,7 @@ export class StationService {
             filename,
           );
 
-          this.socketGateway.sendEvaluationReportGenerationProgress(
+          this.socketService.updateReportGenerationProgress(
             userId,
             '97%',
           );
@@ -467,7 +468,7 @@ export class StationService {
             evaluationReportPdf: uploadedUrl,
             totalMarks: 100,
           } as Evaluation);
-          this.socketGateway.sendEvaluationReportGenerationProgress(
+          this.socketService.updateReportGenerationProgress(
             userId,
             '100%',
             uploadedUrl,

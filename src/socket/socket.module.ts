@@ -12,11 +12,11 @@ import {
 } from 'src/chat/schemas/session.schema';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
 import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
-import { SocketGateway } from './socket.gateway';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { Patient, PatientSchema } from 'src/station/schemas/patient.schema';
 import { PatientRepository } from 'src/station/repositories/patient.repository';
+import { SocketService } from './socket.service';
 
 @Module({
   imports: [
@@ -38,7 +38,6 @@ import { PatientRepository } from 'src/station/repositories/patient.repository';
     }),
   ],
   providers: [
-    SocketGateway,
     UsersRepository,
     PatientRepository,
     ChatsRepository,

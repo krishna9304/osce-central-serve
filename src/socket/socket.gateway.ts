@@ -5,6 +5,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
   OnGatewayDisconnect,
+  OnGatewayConnection,
 } from '@nestjs/websockets';
 import axios from 'axios';
 import { Server, Socket } from 'socket.io';
@@ -23,7 +24,7 @@ import { UsersRepository } from 'src/user/repositories/user.repository';
 import { User } from 'src/user/schemas/user.schema';
 
 @WebSocketGateway()
-export class SocketGateway implements OnGatewayDisconnect {
+export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -39,6 +40,10 @@ export class SocketGateway implements OnGatewayDisconnect {
     private readonly configService: ConfigService,
   ) {}
 
+  handleConnection(_client: Socket) {
+    this.printConnections();
+  }
+
   handleDisconnect(client: Socket): void {
     this.removeSocketFromMap(client);
   }
@@ -50,6 +55,7 @@ export class SocketGateway implements OnGatewayDisconnect {
   ): Promise<void> {
     try {
       const { content, sessionId } = payload;
+      console.log(payload);
 
       const sessionExists = await this.examSessionsRepository.exists({
         sessionId,
