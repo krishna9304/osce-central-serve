@@ -55,7 +55,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ): Promise<void> {
     try {
       const { content, sessionId } = payload;
-      console.log(payload);
 
       const sessionExists = await this.examSessionsRepository.exists({
         sessionId,
@@ -94,7 +93,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       const prompt = await this.createPrompt(user, patient, session, content);
-      console.log(prompt);
 
       await this.chatsRepository.create({
         sessionId,

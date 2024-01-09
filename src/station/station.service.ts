@@ -289,8 +289,27 @@ export class StationService {
       const stations = await this.stationRepository.find({
         stationCategory: categoryId,
       });
+      const stationIds = stations.map((station) => station.stationId);
+      const patients = await this.patientRepository.find({
+        associatedStation: { $in: stationIds },
+      });
 
-      return stations;
+      const stationsWithPatients = stations.map((station) => {
+        const stationPatients = patients.filter(
+          (patient) => patient.associatedStation === station.stationId,
+        );
+        return {
+          ...station,
+          metadata: {
+            patientName: stationPatients[0]['patientName'],
+            patientAge: stationPatients[0]['age'],
+            patientSex: stationPatients[0]['sex'],
+            patientAvatar: stationPatients[0]['avatar'],
+          },
+        };
+      });
+
+      return stationsWithPatients;
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException(
@@ -449,20 +468,14 @@ export class StationService {
           if (err)
             throw new Error('Something went wrong while generating PDF.');
 
-          this.socketService.updateReportGenerationProgress(
-            userId,
-            '90%',
-          );
+          this.socketService.updateReportGenerationProgress(userId, '90%');
           const filename = `${stationId}-${sessionId}.pdf`;
           const uploadedUrl = await this.azureBlobUtil.uploadPdfUsingBuffer(
             buffer,
             filename,
           );
 
-          this.socketService.updateReportGenerationProgress(
-            userId,
-            '97%',
-          );
+          this.socketService.updateReportGenerationProgress(userId, '97%');
           await this.evaluationRepository.create({
             associatedSession: sessionId,
             evaluationReportPdf: uploadedUrl,

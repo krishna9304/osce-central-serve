@@ -141,7 +141,7 @@ export const getInitalPatientPrompt = (user: User, patient: Patient) => {
     },
     {
       role: 'system',
-      content: `The above are some example conversations only. Please do not use the exact sentences while roleplaying the character of ${patient.patientName}.`,
+      content: `The above are some example conversations only. Please do not use the exact sentences while roleplaying the character of ${patient.patientName}. Always remember that you're here to seek help, In your response don't use phrases like - "I'm an AI, how can I help you?" or "How may I assist you today?" or "How can I help you today?".\n`,
     },
   ];
 
