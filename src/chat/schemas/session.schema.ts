@@ -13,7 +13,7 @@ export class ExamSession extends AbstractDocument {
   _id: Types.ObjectId;
 
   @Prop({
-    default: `session-${randomUUID().replace('-', '').slice(0, 10)}`,
+    default: null,
     unique: true,
   })
   sessionId: string;
@@ -44,3 +44,10 @@ export class ExamSession extends AbstractDocument {
 }
 
 export const ExamSessionSchema = SchemaFactory.createForClass(ExamSession);
+
+ExamSessionSchema.pre('save', function (next) {
+  this.sessionId = `${ExamSession.name}-${randomUUID()
+    .replace('-', '')
+    .slice(0, 10)}`;
+  next();
+});
