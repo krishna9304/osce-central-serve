@@ -16,4 +16,8 @@ export class SocketService {
       pdfUrl,
     );
   }
+
+  async throwError(userId: string, error: string): Promise<void> {
+    this.socketGateway.sendError(userId, error);
+  }
 }

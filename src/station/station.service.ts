@@ -465,8 +465,10 @@ export class StationService {
         { content: htmlText },
         { format: 'A4' },
         async (err, buffer: Buffer) => {
-          if (err)
+          if (err) {
+            this.socketService.throwError(userId, err.message);
             throw new Error('Something went wrong while generating PDF.');
+          }
 
           this.socketService.updateReportGenerationProgress(userId, '90%');
           const filename = `${stationId}-${sessionId}.pdf`;
@@ -490,6 +492,7 @@ export class StationService {
       );
     } catch (error) {
       console.log(error);
+      this.socketService.throwError(userId, error.message);
       throw new InternalServerErrorException(
         'Something went wrong while fetching evaluation results.',
       );

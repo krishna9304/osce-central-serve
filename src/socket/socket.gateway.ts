@@ -264,4 +264,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
     }
   }
+
+  async sendError(userId: string, error: string) {
+    const client = this.userSocketMap.get(userId);
+    if (client) {
+      client.emit('ERROR', {
+        msg: error,
+      });
+    }
+  }
 }
