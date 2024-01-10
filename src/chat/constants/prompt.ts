@@ -185,9 +185,9 @@ export const getEvaluatorPrompt = (
                       6. You will always abide by the evaluation format as described below and give specific answers with respect to the question in the evaluation format template.\n
                       7. Do not include any extra information in the evaluation report which is not asked in the evaluation format template.\n
                       8. The final evaluation report should be simple, precise and to the point according to the format.\n
-                      9. You can emojis like ✅ or 🚫 for a checklist evaluation.\n
+                      9. You will give one word answers - "Yes" or "No" for a checklist evaluation.\n
                       10. Do not create any new evaluation format template. Always use the one provided below.\n
-                      11. Do not include the instructions in the evaluation format template in the evaluation report.\n
+                      11. Do not include the instructions (Instructions are in the brackets, please do not include those in the final response.) in the evaluation format template in the evaluation report.\n
                       12. Give the complete evaluation report in a single message only with all the markdown format styling.\n
                       13. Include both positive and negative feedbacks in the evaluation report.
                       14. For negative feedbacks, use strict evaluation.\n`,
@@ -209,14 +209,14 @@ export const getEvaluatorPrompt = (
                 9. Management (Was Dr. ${userFirstName} able to manage the patient properly and address his/her issues and give appropriate consultation to the patient? Describe and give feedback as an evaluator and learned medical expert):\n
                 10. Time management (Was Dr. ${userFirstName} able to manage the time properly and was he/she able to conclude the consultation within the time limit? Describe and give feedback as an evaluator and learned medical expert):\n
                 11. Overall performance (Overall, how was the performance of Dr. ${userFirstName}? Describe and give feedback as an evaluator and learned medical expert):\n
-                12. Clinical checklist (Did Dr. ${userFirstName} follow all the items from the checklist? Put a ✅ for "Yes" if the item is performed by Dr. ${userFirstName} and use a 🚫 for "No" if the item is not performed by Dr. ${userFirstName}. Do not use any other emojis.):\n
+                12. Clinical checklist (Did Dr. ${userFirstName} follow all the items from the checklist? Put a "Yes" if the item is performed by Dr. ${userFirstName} and use a "No" if the item is not performed by Dr. ${userFirstName} during their conversation with the patient. Do not use any other words.):\n
                 ${evaluator.clinicalChecklist.map(
-                  (checklist) => `    - ${checklist}\n`,
+                  (checklist) => `    - ${checklist}: (Yes/No ?)\n`,
                 )}`,
     },
     {
       role: 'user',
-      content: 'Please provide the evaluation report in the above format.',
+      content: 'Please provide the evaluation report in the above format and do not include any extra information relevant or irrelevant.',
     },
   ];
   return evaluatorPrompt;
