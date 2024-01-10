@@ -31,7 +31,6 @@ import { Converter } from 'showdown';
 import { generatePdf } from 'html-pdf-node';
 import { EvaluationRepository } from './repositories/evaluation.repository';
 import { Evaluation } from './schemas/evaluation.schema';
-import { SocketGateway } from 'src/socket/socket.gateway';
 import { SocketService } from 'src/socket/socket.service';
 
 @Injectable()
