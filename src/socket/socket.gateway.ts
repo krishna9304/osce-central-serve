@@ -255,12 +255,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     userId: string,
     percentage: string,
     pdfUrl: string = null,
+    score: string = null,
   ) {
     const client = this.userSocketMap.get(userId);
     if (client) {
       client.emit('EVALUATION_REPORT_GENERATION_PROGRESS', {
         progress: percentage,
         pdfUrl,
+        score: score,
       });
     }
   }
