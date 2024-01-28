@@ -8,6 +8,11 @@ export interface Conversation {
   assistant: string;
 }
 
+export interface Findings {
+  name: string;
+  value: string;
+}
+
 @Schema({ versionKey: false })
 export class Patient extends AbstractDocument {
   _id: Types.ObjectId;
@@ -95,6 +100,12 @@ export class Patient extends AbstractDocument {
 
   @Prop({ default: null })
   additionalInstructions: string;
+
+  @Prop({ default: [] })
+  findings: Array<Findings>;
+
+  @Prop({ required: true })
+  voiceId11Labs: string;
 
   @Prop({ default: new Date().toISOString() })
   created_at: string;

@@ -1,9 +1,5 @@
-import {
-  IsNotEmpty,
-  IsNumber,
-  IsNumberString,
-  IsString,
-} from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumberString, IsString } from 'class-validator';
+import { Findings } from '../schemas/patient.schema';
 
 export class CreatePatientRequest {
   patientId: string;
@@ -107,6 +103,13 @@ export class CreatePatientRequest {
   associatedStation: string;
 
   additionalInstructions: string;
+
+  @IsNotEmpty()
+  @IsString()
+  voiceId11Labs: string;
+
+  @IsArray()
+  findings: Array<Findings>;
 
   created_at: string;
 

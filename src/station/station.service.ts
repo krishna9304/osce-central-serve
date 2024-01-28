@@ -287,6 +287,7 @@ export class StationService {
     try {
       const stations = await this.stationRepository.find({
         stationCategory: categoryId,
+        status: 'active',
       });
       const stationIds = stations.map((station) => station.stationId);
       const patients = await this.patientRepository.find({
