@@ -16,7 +16,6 @@ import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { Patient, PatientSchema } from 'src/station/schemas/patient.schema';
 import { PatientRepository } from 'src/station/repositories/patient.repository';
-import { SocketService } from './socket.service';
 
 @Module({
   imports: [

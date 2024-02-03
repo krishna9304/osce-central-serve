@@ -22,6 +22,7 @@ import { StationsRepository } from 'src/station/repositories/station.repository'
 import { Patient } from 'src/station/schemas/patient.schema';
 import { UsersRepository } from 'src/user/repositories/user.repository';
 import { User } from 'src/user/schemas/user.schema';
+import { OpenAiUtil } from 'src/utils/openai.util';
 
 @WebSocketGateway()
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -37,7 +38,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly stationsRepository: StationsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly patientRepository: PatientRepository,
-    private readonly configService: ConfigService,
+    private readonly openAiUtil: OpenAiUtil,
   ) {}
 
   handleConnection(_client: Socket) {
@@ -168,30 +169,8 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: Socket,
     prompt: Array<{ role: string; content: string }>,
   ) {
-    const url = 'https://api.openai.com/v1/chat/completions';
-
-    const headers = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.configService.get<string>(
-        'OPENAI_API_KEY',
-      )}`,
-    };
-
-    const body = {
-      messages: prompt,
-      model: 'gpt-3.5-turbo-1106',
-      max_tokens: 150,
-      temperature: 0.7,
-      stream: true,
-    };
-
     try {
-      const response = await axios.post(url, body, { headers });
-
-      const data = response.data
-        .split('\n')
-        .filter((s) => s != '' && !s.includes('[DONE]'))
-        .map((t) => JSON.parse(t.slice(6, t.length)));
+      const data = await this.openAiUtil.getChatCompletionsStream(prompt);
 
       let fullMessage = [];
 
@@ -255,7 +234,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     userId: string,
     percentage: string,
     pdfUrl: string = null,
-    score: string = null,
+    score: number = null,
   ) {
     const client = this.userSocketMap.get(userId);
     if (client) {

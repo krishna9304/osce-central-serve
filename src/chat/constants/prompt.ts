@@ -1,4 +1,3 @@
-import { Evaluator } from 'src/station/schemas/evaluator.schema';
 import { Patient } from 'src/station/schemas/patient.schema';
 import { User } from 'src/user/schemas/user.schema';
 import { Chat } from '../schemas/chat.schema';
@@ -148,76 +147,41 @@ export const getInitalPatientPrompt = (user: User, patient: Patient) => {
   return patientPrompt;
 };
 
-export const getEvaluatorPrompt = (
-  userName: string,
-  patient: Patient,
-  evaluator: Evaluator,
+export const getEvaluatorSystemPrompt = (
+  userFirstName: string,
+  patientName: string,
   chats: Array<Chat>,
 ) => {
-  const userFirstName = userName.split(' ')[0];
-  const evaluatorPrompt = [
-    {
-      role: 'system',
-      content: `You're a medical expert and have years of experience dealing with patients. You're here to evaluate the performance of Dr. ${userFirstName} and provide a marked evaluation report based on how he/she had a conversation with a patient named ${patient.patientName} who came to seek help regarding his/her medical situation.`,
-    },
-    {
-      role: 'system',
-      content: `Following is the complete consultation conversation between Dr. ${userFirstName} and ${
-        patient.patientName
-      }:\n
-            ${chats.map(
-              (chat) =>
-                `${
-                  chat.role == 'user'
-                    ? 'Dr. ' + userFirstName
-                    : patient.patientName.split(' ')[0]
-                } ${chat.content}\n`,
-            )}\n`,
-    },
-    {
-      role: 'system',
-      content: `Please note some strict guildelines while evaluating:\n
-                      1. You can never reveal that you're an AI.\n
-                      2. You can never give a biased evaluation report.\n
-                      3. You should never break character under any circumstances.\n
-                      4. You will always give your response in a markdown format, using bulletins and appropriate font styles wherever required.\n
-                      5. You should never ask question like - "I'm an AI, how can I help you?" or "How may I assist you today?"\n
-                      6. You will always abide by the evaluation format as described below and give specific answers with respect to the question in the evaluation format template.\n
-                      7. Do not include any extra information in the evaluation report which is not asked in the evaluation format template.\n
-                      8. The final evaluation report should be simple, precise and to the point according to the format.\n
-                      9. You will give one word answers - "Yes" or "No" for a checklist evaluation.\n
-                      10. Do not create any new evaluation format template. Always use the one provided below.\n
-                      11. Do not include the instructions (Instructions are in the brackets, please do not include those in the final response.) in the evaluation format template in the evaluation report.\n
-                      12. Give the complete evaluation report in a single message only with all the markdown format styling.\n
-                      13. Include both positive and negative feedbacks in the evaluation report.
-                      14. For negative feedbacks, use strict evaluation.\n`,
-    },
-    {
-      role: 'system',
-      content: `**Evaluation format template**`,
-    },
-    {
-      role: 'system',
-      content: `1. Structure of consultation (Did Dr. ${userFirstName} kept the consultation in order and was it coherent throughout the consultation? Describe and give feedback as an evaluator and learned medical expert.)\n
-                2. Language used by the doctor (Was the language used by Dr. ${userFirstName} simple and clear? Describe and give feedback as an evaluator and learned medical expert.)\n
-                3. Picking up issues (Was Dr. ${userFirstName} able to identify the issues faced by the patient? Describe and give feedback as an evaluator and learned medical expert.)\n
-                4. Listening skills of doctor (Do Dr. ${userFirstName} has good listening skills and did he/she acknowledged the patient's concerns, and asked follow-up questions, and clarified the patient's statements? Describe and give feedback as an evaluator and learned medical expert.)\n
-                5. Rapport with the patient (Did Dr. ${userFirstName} build a good rapport with the patient and maintained a professional tone during his conversation with the patient? Describe and give feedback as an evaluator and learned medical expert)\n
-                6. Examination (Did Dr. ${userFirstName} mention all the relevant examinations? Describe and give feedback as an evaluator and learned medical expert)\n
-                7. Findings (Was Dr. ${userFirstName} able to identify and elicit all the relevant findings for this case? Describe and give feedback as an evaluator and learned medical expert)\n
-                8. Diagnosis (Was Dr. ${userFirstName} able to arrive at the conclusion of the situation faced by the patient? Describe and give feedback as an evaluator and learned medical expert):\n
-                9. Management (Was Dr. ${userFirstName} able to manage the patient properly and address his/her issues and give appropriate consultation to the patient? Describe and give feedback as an evaluator and learned medical expert):\n
-                10. Time management (Was Dr. ${userFirstName} able to manage the time properly and was he/she able to conclude the consultation within the time limit? Describe and give feedback as an evaluator and learned medical expert):\n
-                11. Overall performance (Overall, how was the performance of Dr. ${userFirstName}? Describe and give feedback as an evaluator and learned medical expert):\n
-                12. Clinical checklist (Did Dr. ${userFirstName} follow all the items from the checklist? Put a "Yes" if the item is performed by Dr. ${userFirstName} and use a "No" if the item is not performed by Dr. ${userFirstName} during their conversation with the patient. Do not use any other words.):\n
-                ${evaluator.clinicalChecklist.map(
-                  (checklist) => `    - ${checklist}: (Yes/No ?)\n`,
-                )}`,
-    },
-    {
-      role: 'user',
-      content: 'Please provide the evaluation report in the above format and do not include any extra information relevant or irrelevant.',
-    },
-  ];
-  return evaluatorPrompt;
+  const evaluatorSystemPrompt = `
+    You're a medical expert and have years of experience dealing with patients. You're here to evaluate the performance of Dr. ${userFirstName} and provide a marked evaluation report based on how he/she had a conversation with a patient named ${patientName} who came to seek help regarding their medical situation.
+    You are also a critic in the medical field and you give very precise feedback to doctors who're in practice.
+    Following is the complete consultation conversation between Dr. ${userFirstName} and ${patientName}:\n
+    ${chats.map((chat) =>
+      chat.role === 'user'
+        ? 'Dr. ' + userFirstName + ': ' + chat.content + '\n'
+        : patientName.split(' ')[0] + ': ' + chat.content + '\n',
+    )}\n`;
+  return evaluatorSystemPrompt;
+};
+
+export const getUserPromptForNonClinicalChecklist = (
+  nonClinicalChecklistItem: {
+    label: string;
+    scores: Array<{
+      label: string;
+      value: number;
+      remark: string;
+    }>;
+  },
+  userFirstName,
+) => {
+  const userPromptForNonClinicalChecklist = `
+    Please rate Dr. ${userFirstName} for the judging criteria - "${
+      nonClinicalChecklistItem.label
+    }" on a scale of 1 to 5 stars adhering to the below scoring instructions:\n
+      ${nonClinicalChecklistItem.scores
+        .map((score) => `${score.label} - ${score.remark}\n`)
+        .join('')}
+  `;
+  return userPromptForNonClinicalChecklist;
 };

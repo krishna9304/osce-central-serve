@@ -3,6 +3,11 @@ import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { AbstractDocument } from 'src/database/abstract.schema';
 
+export interface ChecklistItem {
+  question: string;
+  marks: number;
+}
+
 @Schema({ versionKey: false })
 export class Evaluator extends AbstractDocument {
   _id: Types.ObjectId;
@@ -14,7 +19,7 @@ export class Evaluator extends AbstractDocument {
   evaluatorId: string;
 
   @Prop({ required: true })
-  clinicalChecklist: Array<string>;
+  clinicalChecklist: Array<ChecklistItem>;
 
   @Prop({ required: true })
   associatedStation: string;

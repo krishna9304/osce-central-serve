@@ -1,4 +1,5 @@
 import { IsArray, IsNotEmpty, IsString } from 'class-validator';
+import { ChecklistItem } from '../schemas/evaluator.schema';
 
 export class CreateEvaluatorRequest {
   evaluatorId: string;
@@ -8,8 +9,8 @@ export class CreateEvaluatorRequest {
   associatedStation: string;
 
   @IsNotEmpty()
-  @IsArray({ message: 'clinicalChecklist must be an array of strings' })
-  clinicalChecklist: Array<string>;
+  @IsArray({ message: 'clinicalChecklist must be an array of ChecklistItems' })
+  clinicalChecklist: Array<ChecklistItem>;
 
   created_at: string;
 

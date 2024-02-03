@@ -20,18 +20,24 @@ import { StationCategory } from './schemas/category.schema';
 import { Station } from './schemas/station.schema';
 import { Patient } from './schemas/patient.schema';
 import { Evaluator } from './schemas/evaluator.schema';
-import { ConfigService } from '@nestjs/config';
-import { getEvaluatorPrompt } from 'src/chat/constants/prompt';
+import {
+  getEvaluatorSystemPrompt,
+  getUserPromptForNonClinicalChecklist,
+} from 'src/chat/constants/prompt';
 import { User } from 'src/user/schemas/user.schema';
 import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
-import axios from 'axios';
 import { ExamSessionStatus } from 'src/chat/schemas/session.schema';
-import { Converter } from 'showdown';
-import { generatePdf } from 'html-pdf-node';
 import { EvaluationRepository } from './repositories/evaluation.repository';
-import { Evaluation } from './schemas/evaluation.schema';
+import {
+  ClinicalChecklistMarkingItem,
+  Evaluation,
+  NonClinicalChecklistMarkingItem,
+} from './schemas/evaluation.schema';
 import { SocketService } from 'src/socket/socket.service';
+import axios from 'axios';
+import { ConfigService } from '@nestjs/config';
+import { NonClinicalChecklist } from './assets/checklist';
 
 @Injectable()
 export class StationService {
@@ -42,11 +48,11 @@ export class StationService {
     private readonly patientRepository: PatientRepository,
     private readonly evaluatorRepository: EvaluatorRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
-    private readonly configService: ConfigService,
     private readonly examSessionsRepository: ExamSessionsRepository,
     private readonly chatsRepository: ChatsRepository,
     private readonly evaluationRepository: EvaluationRepository,
     private readonly socketService: SocketService,
+    private readonly configService: ConfigService,
   ) {}
 
   async createStream(streamRequestData: CreateStreamRequest) {
@@ -117,6 +123,15 @@ export class StationService {
         'Provided station ID is invalid and does not match our records.',
       );
 
+    const patientExists = await this.patientRepository.exists({
+      associatedStation,
+    });
+
+    if (patientExists)
+      throw new BadRequestException(
+        'Patient already exists for the provided station.',
+      );
+
     try {
       if (avatar) {
         const avatarUrl = await this.azureBlobUtil.uploadImage(avatar);
@@ -144,6 +159,16 @@ export class StationService {
       throw new NotFoundException(
         'Provided station ID is invalid and does not match our records.',
       );
+
+    const evaluatorExists = await this.evaluatorRepository.exists({
+      associatedStation,
+    });
+
+    if (evaluatorExists)
+      throw new BadRequestException(
+        'Evaluator already exists for the provided station.',
+      );
+
     try {
       await this.evaluatorRepository.create({
         ...evaluatorRequestData,
@@ -301,10 +326,18 @@ export class StationService {
         return {
           ...station,
           metadata: {
-            patientName: stationPatients[0]['patientName'],
-            patientAge: stationPatients[0]['age'],
-            patientSex: stationPatients[0]['sex'],
-            patientAvatar: stationPatients[0]['avatar'],
+            patientName: stationPatients.length
+              ? stationPatients[0]['patientName']
+              : null,
+            patientAge: stationPatients.length
+              ? stationPatients[0]['age']
+              : null,
+            patientSex: stationPatients.length
+              ? stationPatients[0]['sex']
+              : null,
+            patientAvatar: stationPatients.length
+              ? stationPatients[0]['avatar']
+              : null,
           },
         };
       });
@@ -431,72 +464,86 @@ export class StationService {
     });
 
     this.socketService.updateReportGenerationProgress(userId, '30%');
-    const prompt = getEvaluatorPrompt(userName, patient, evaluator, chats);
 
-    this.socketService.updateReportGenerationProgress(userId, '40%');
-    const url = 'https://api.openai.com/v1/chat/completions';
+    const evaluateServerURL =
+      this.configService.get<string>('EVALUATION_API_URL');
 
-    const headers = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.configService.get<string>(
-        'OPENAI_API_KEY',
-      )}`,
-    };
+    const userFirstName = userName.split(' ')[0];
+    const evaluatorSystemPrompt = getEvaluatorSystemPrompt(
+      userFirstName,
+      patient.patientName,
+      chats,
+    );
 
-    const body = {
-      messages: prompt,
-      model: 'gpt-3.5-turbo-1106',
-      max_tokens: 2000,
-      temperature: 0.7,
-    };
-
-    try {
-      const response = await axios.post(url, body, { headers });
-      const markdownResponse: string = response.data.choices[0].message.content;
-
-      this.socketService.updateReportGenerationProgress(userId, '70%');
-      const converter = new Converter({ emoji: true, tasklists: true });
-
-      this.socketService.updateReportGenerationProgress(userId, '80%');
-      const htmlText = converter.makeHtml(markdownResponse);
-
-      this.socketService.updateReportGenerationProgress(userId, '85%');
-      generatePdf(
-        { content: htmlText },
-        { format: 'A4' },
-        async (err, buffer: Buffer) => {
-          if (err) {
-            this.socketService.throwError(userId, err.message);
-            throw new Error('Something went wrong while generating PDF.');
-          }
-
-          this.socketService.updateReportGenerationProgress(userId, '90%');
-          const filename = `${stationId}-${sessionId}.pdf`;
-          const uploadedUrl = await this.azureBlobUtil.uploadPdfUsingBuffer(
-            buffer,
-            filename,
-          );
-
-          this.socketService.updateReportGenerationProgress(userId, '97%');
-          await this.evaluationRepository.create({
-            associatedSession: sessionId,
-            evaluationReportPdf: uploadedUrl,
-            totalMarks: 100,
-          } as Evaluation);
-          this.socketService.updateReportGenerationProgress(
-            userId,
-            '100%',
-            uploadedUrl,
-          );
-        },
-      );
-    } catch (error) {
-      console.log(error);
-      this.socketService.throwError(userId, error.message);
-      throw new InternalServerErrorException(
-        'Something went wrong while fetching evaluation results.',
-      );
+    // ****************Clinical Checklist Marking***************
+    let totalClinicalMarks = 0;
+    let securedMarks = 0;
+    let userPromptPrefix =
+      'Analyze the given conversation and answer the given question: \n';
+    const markedClinicalChecklist: Array<ClinicalChecklistMarkingItem> = [];
+    for await (const clinicalChecklistItem of evaluator.clinicalChecklist) {
+      const evaluatorUserPrompt =
+        userPromptPrefix +
+        `Did Dr. ${userFirstName} ${clinicalChecklistItem.question} ?`;
+      const options = ['Yes', 'No'];
+      const res = await axios.post(evaluateServerURL, {
+        systemPrompt: evaluatorSystemPrompt,
+        userPrompt: evaluatorUserPrompt,
+        options,
+      });
+      markedClinicalChecklist.push({
+        question: clinicalChecklistItem.question,
+        score: res.data.data === 'Yes' ? clinicalChecklistItem.marks : 0,
+      });
+      totalClinicalMarks += clinicalChecklistItem.marks;
+      securedMarks += res.data.data === 'Yes' ? clinicalChecklistItem.marks : 0;
     }
+    this.socketService.updateReportGenerationProgress(userId, '60%');
+
+    // **************Non-Clinical Checklist Marking*************
+    let totalNonClinicalMarks = 0;
+    userPromptPrefix =
+      'Analyze the given conversation and provide marks for given question: \n';
+    const markedNonClinicalChecklist: Array<NonClinicalChecklistMarkingItem> =
+      [];
+    for await (const nonClinicalChecklistItem of NonClinicalChecklist) {
+      const evaluatorUserPrompt =
+        userPromptPrefix +
+        getUserPromptForNonClinicalChecklist(
+          nonClinicalChecklistItem,
+          userFirstName,
+        );
+      const options = [1, 2, 3, 4, 5];
+      const res = await axios.post(evaluateServerURL, {
+        systemPrompt: evaluatorSystemPrompt,
+        userPrompt: evaluatorUserPrompt,
+        options,
+      });
+      markedNonClinicalChecklist.push({
+        label: nonClinicalChecklistItem.label,
+        score: parseInt(res.data.data),
+      });
+      totalNonClinicalMarks += 5;
+      securedMarks += parseInt(res.data.data);
+    }
+    this.socketService.updateReportGenerationProgress(userId, '80%');
+    // ************************************************************
+
+    const totalSecurableMarks = totalClinicalMarks + totalNonClinicalMarks;
+    const securedMarksOutOf12 = (securedMarks / totalSecurableMarks) * 12;
+
+    await this.evaluationRepository.create({
+      associatedSession: sessionId,
+      clinicalChecklist: markedClinicalChecklist,
+      nonClinicalChecklist: markedNonClinicalChecklist,
+      marksObtained: securedMarksOutOf12,
+    } as Evaluation);
+    this.socketService.updateReportGenerationProgress(
+      userId,
+      '100%',
+      null,
+      securedMarksOutOf12,
+    );
   }
 
   async getEvaluationReport(
