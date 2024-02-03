@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Query,
   UnauthorizedException,
   UploadedFile,
@@ -215,8 +216,11 @@ export class StationController {
 
   @Get('list-stations/:categoryId')
   @UseGuards(JwtAuthGuard)
-  async listStations(@Param('categoryId') categoryId: string) {
-    const stations = await this.stationService.listStations(categoryId);
+  async listStations(
+    @Param('categoryId') categoryId: string,
+    @CurrentUser() user: User,
+  ) {
+    const stations = await this.stationService.listStations(categoryId, user);
     const res = new ApiResponse(
       'Stations fetched successfully',
       null,
@@ -284,6 +288,139 @@ export class StationController {
       null,
       200,
       report,
+    );
+    return res.getResponse();
+  }
+
+  @Put(':stationId')
+  @UseGuards(JwtAuthGuard)
+  async updateStation(
+    @CurrentUser() user: User,
+    @Param('stationId') stationId: string,
+    @Body() stationRequestData: Partial<CreateStationRequest>,
+  ) {
+    if (user.role !== 'admin')
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can update stations.',
+      );
+
+    const updatedStation = await this.stationService.updateStation(
+      stationId,
+      stationRequestData,
+    );
+
+    const res = new ApiResponse(
+      'Station updated successfully',
+      null,
+      200,
+      updatedStation,
+    );
+    return res.getResponse();
+  }
+
+  @Put('stream/:streamId')
+  @UseGuards(JwtAuthGuard)
+  async updateStream(
+    @CurrentUser() user: User,
+    @Param('streamId') streamId: string,
+    @Body() streamRequestData: Partial<CreateStreamRequest>,
+  ) {
+    if (user.role !== 'admin')
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can update streams.',
+      );
+
+    const updatedStream = await this.stationService.updateStream(
+      streamId,
+      streamRequestData,
+    );
+
+    const res = new ApiResponse(
+      'Stream updated successfully',
+      null,
+      200,
+      updatedStream,
+    );
+    return res.getResponse();
+  }
+
+  @Put('category/:categoryId')
+  @UseGuards(JwtAuthGuard)
+  async updateCategory(
+    @CurrentUser() user: User,
+    @Param('categoryId') categoryId: string,
+    @Body() categoryRequestData: Partial<CreateCategoryRequest>,
+  ) {
+    if (user.role !== 'admin')
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can update categories.',
+      );
+
+    const updatedCategory = await this.stationService.updateCategory(
+      categoryId,
+      categoryRequestData,
+    );
+
+    const res = new ApiResponse(
+      'Category updated successfully',
+      null,
+      200,
+      updatedCategory,
+    );
+    return res.getResponse();
+  }
+
+  @Put('patient/:patientId')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('avatar'))
+  async updatePatient(
+    @UploadedFile() avatar: Express.Multer.File,
+    @CurrentUser() user: User,
+    @Param('patientId') patientId: string,
+    @Body() patientRequestData: Partial<CreatePatientRequest>,
+  ) {
+    if (user.role !== 'admin')
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can update patients.',
+      );
+
+    const updatedPatient = await this.stationService.updatePatient(
+      patientId,
+      patientRequestData,
+      avatar,
+    );
+
+    const res = new ApiResponse(
+      'Patient updated successfully',
+      null,
+      200,
+      updatedPatient,
+    );
+    return res.getResponse();
+  }
+
+  @Put('evaluator/:evaluatorId')
+  @UseGuards(JwtAuthGuard)
+  async updateEvaluator(
+    @CurrentUser() user: User,
+    @Param('evaluatorId') evaluatorId: string,
+    @Body() evaluatorRequestData: Partial<CreateEvaluatorRequest>,
+  ) {
+    if (user.role !== 'admin')
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can update evaluators.',
+      );
+
+    const updatedEvaluator = await this.stationService.updateEvaluator(
+      evaluatorId,
+      evaluatorRequestData,
+    );
+
+    const res = new ApiResponse(
+      'Evaluator updated successfully',
+      null,
+      200,
+      updatedEvaluator,
     );
     return res.getResponse();
   }

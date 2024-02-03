@@ -300,7 +300,7 @@ export class StationService {
     }
   }
 
-  async listStations(categoryId: string): Promise<Station[]> {
+  async listStations(categoryId: string, user: User): Promise<Station[]> {
     const categoryExists = await this.stationCategoryRepository.exists({
       categoryId,
     });
@@ -310,10 +310,17 @@ export class StationService {
         'Provided category ID is invalid and does not match our records.',
       );
     try {
-      const stations = await this.stationRepository.find({
-        stationCategory: categoryId,
-        status: 'active',
-      });
+      let stations = [];
+      if (user.role === 'admin') {
+        stations = await this.stationRepository.find({
+          stationCategory: categoryId,
+        });
+      } else {
+        stations = await this.stationRepository.find({
+          stationCategory: categoryId,
+          status: 'active',
+        });
+      }
       const stationIds = stations.map((station) => station.stationId);
       const patients = await this.patientRepository.find({
         associatedStation: { $in: stationIds },
@@ -587,5 +594,156 @@ export class StationService {
     });
 
     return evaluation;
+  }
+
+  async updateStation(
+    stationId: string,
+    stationRequestData: Partial<CreateStationRequest>,
+  ): Promise<Station> {
+    try {
+      const updatedStation = await this.stationRepository.findOneAndUpdate(
+        { stationId },
+        {
+          $set: { ...stationRequestData, updated_at: new Date().toISOString() },
+        },
+      );
+      return updatedStation;
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException(
+        'Failed to update the station. Kindly check the request parameters and abide by the constraints.',
+      );
+    }
+  }
+
+  async updateStream(
+    streamId: string,
+    streamRequestData: Partial<CreateStreamRequest>,
+  ): Promise<Stream> {
+    try {
+      const updatedStream = await this.streamRepository.findOneAndUpdate(
+        { streamId },
+        {
+          $set: { ...streamRequestData, updated_at: new Date().toISOString() },
+        },
+      );
+      return updatedStream;
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException(
+        'Failed to update the stream. Kindly check the request parameters and abide by the constraints.',
+      );
+    }
+  }
+
+  async updateCategory(
+    categoryId: string,
+    categoryRequestData: Partial<CreateCategoryRequest>,
+  ): Promise<StationCategory> {
+    try {
+      const updatedCategory =
+        await this.stationCategoryRepository.findOneAndUpdate(
+          { categoryId },
+          {
+            $set: {
+              ...categoryRequestData,
+              updated_at: new Date().toISOString(),
+            },
+          },
+        );
+      return updatedCategory;
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException(
+        'Failed to update the category. Kindly check the request parameters and abide by the constraints.',
+      );
+    }
+  }
+
+  async updatePatient(
+    patientId: string,
+    patientRequestData: Partial<CreatePatientRequest>,
+    avatar: Express.Multer.File,
+  ): Promise<Patient> {
+    try {
+      if (patientRequestData.associatedStation) {
+        const stationExists = await this.stationRepository.exists({
+          stationId: patientRequestData.associatedStation,
+        });
+
+        if (!stationExists)
+          throw new NotFoundException(
+            'Provided station ID is invalid and does not match our records.',
+          );
+
+        const patientExists = await this.patientRepository.exists({
+          associatedStation: patientRequestData.associatedStation,
+        });
+
+        if (patientExists)
+          throw new BadRequestException(
+            'Patient already exists for the provided station Id. Please try with another station Id.',
+          );
+      }
+      if (avatar) {
+        const avatarUrl = await this.azureBlobUtil.uploadImage(avatar);
+        patientRequestData.avatar = avatarUrl;
+      }
+
+      const updatedPatient = await this.patientRepository.findOneAndUpdate(
+        { patientId },
+        {
+          $set: { ...patientRequestData, updated_at: new Date().toISOString() },
+        },
+      );
+      return updatedPatient;
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException(
+        'Failed to update the patient. Kindly check the request parameters and abide by the constraints.',
+      );
+    }
+  }
+
+  async updateEvaluator(
+    evaluatorId: string,
+    evaluatorRequestData: Partial<CreateEvaluatorRequest>,
+  ): Promise<Evaluator> {
+    try {
+      if (evaluatorRequestData.associatedStation) {
+        const stationExists = await this.stationRepository.exists({
+          stationId: evaluatorRequestData.associatedStation,
+        });
+
+        if (!stationExists)
+          throw new NotFoundException(
+            'Provided station ID is invalid and does not match our records.',
+          );
+
+        const evaluatorExists = await this.evaluatorRepository.exists({
+          associatedStation: evaluatorRequestData.associatedStation,
+        });
+
+        if (evaluatorExists)
+          throw new BadRequestException(
+            'Evaluator already exists for the provided station Id. Please try with another station Id.',
+          );
+      }
+      const updatedEvaluator = await this.evaluatorRepository.findOneAndUpdate(
+        { evaluatorId },
+        {
+          $set: {
+            ...evaluatorRequestData,
+            updated_at: new Date().toISOString(),
+          },
+        },
+      );
+      return updatedEvaluator;
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException(
+        'Failed to update the evaluator. Kindly check the request parameters and abide by the constraints.',
+      );
+    }
   }
 }

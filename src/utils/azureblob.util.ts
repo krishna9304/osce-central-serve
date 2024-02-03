@@ -76,7 +76,7 @@ export class AzureBlobUtil {
     }
   }
 
-  async uploadPdfUsingBuffer(buffer: Buffer, filename: string) {
+  async uploadUsingBuffer(buffer: Buffer, filename: string) {
     try {
       const blobName = `${Date.now()}-${filename}`;
       const blockBlobClient = this.getBlockBlobClient(blobName);
