@@ -3,6 +3,7 @@ import { AzureBlobUtil } from './azureblob.util';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { OpenAiUtil } from './openai.util';
+import { UtilController } from './util.controller';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { OpenAiUtil } from './openai.util';
       envFilePath: '.env',
     }),
   ],
+  controllers: [UtilController],
   providers: [AzureBlobUtil, OpenAiUtil],
   exports: [AzureBlobUtil, OpenAiUtil],
 })

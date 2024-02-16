@@ -12,10 +12,9 @@ import {
   FindingStatus,
 } from './schemas/session.schema';
 import { StationsRepository } from 'src/station/repositories/station.repository';
-import { ConfigService } from '@nestjs/config';
-import { ChatsRepository } from './repositories/chat.repository';
 import { PatientRepository } from 'src/station/repositories/patient.repository';
 import { randomUUID } from 'crypto';
+import { AzureBlobUtil } from 'src/utils/azureblob.util';
 
 @Injectable()
 export class ChatService {
@@ -23,6 +22,7 @@ export class ChatService {
     private readonly examSessionsRepository: ExamSessionsRepository,
     private readonly stationsRepository: StationsRepository,
     private readonly patientsRepository: PatientRepository,
+    private readonly azureBlobUtil: AzureBlobUtil,
   ) {}
 
   async startExamSession(stationId: string, user: User): Promise<ExamSession> {
@@ -57,15 +57,26 @@ export class ChatService {
       associatedStation: stationId,
     });
 
-    const examSessionData = {
-      stationId,
-      associatedUser: user.userId,
-      findingsRecord: patient.findings.map((finding) => ({
+    const patientFindings = [];
+    for await (const finding of patient.findings) {
+      if (finding.image) {
+        finding.image = await this.azureBlobUtil.getTemporaryPublicUrl(
+          finding.image,
+        );
+      }
+      patientFindings.push({
         id: randomUUID(),
         finding: finding.name,
         value: finding.value,
+        img: finding.image,
         status: FindingStatus.PENDING,
-      })),
+      });
+    }
+
+    const examSessionData = {
+      stationId,
+      associatedUser: user.userId,
+      findingsRecord: patientFindings,
     } as ExamSession;
 
     const createdExamSession =
@@ -152,6 +163,44 @@ export class ChatService {
       throw new InternalServerErrorException(
         error.message ||
           "Something went wrong. Coundn't update findings record.",
+      );
+    }
+  }
+
+  async getSessionDetails(sessionId: string, user: User): Promise<ExamSession> {
+    const sessionExists = await this.examSessionsRepository.exists({
+      sessionId,
+      associatedUser: user.userId,
+    });
+
+    if (!sessionExists) {
+      throw new NotFoundException('Session not found.');
+    }
+
+    try {
+      const session = await this.examSessionsRepository.findOne({
+        sessionId,
+        associatedUser: user.userId,
+      });
+
+      return session;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error.message || "Something went wrong. Coundn't get session details.",
+      );
+    }
+  }
+
+  async getSessionList(user: User): Promise<ExamSession[]> {
+    try {
+      const sessions = await this.examSessionsRepository.find({
+        associatedUser: user.userId,
+      });
+
+      return sessions;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error.message || "Something went wrong. Coundn't get session list.",
       );
     }
   }

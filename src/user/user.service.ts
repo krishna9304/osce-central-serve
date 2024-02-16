@@ -29,6 +29,11 @@ export class UserService {
       );
     } else user = await this.usersRepository.create(request);
 
+    if (user.profile_picture) {
+      user.profile_picture = await this.azureBlobUtil.getTemporaryPublicUrl(
+        user.profile_picture,
+      );
+    }
     delete user.metadata;
 
     return user;
@@ -53,6 +58,12 @@ export class UserService {
         metadata: { ...user.metadata, otp: null },
       },
     );
+
+    if (user.profile_picture) {
+      user.profile_picture = await this.azureBlobUtil.getTemporaryPublicUrl(
+        user.profile_picture,
+      );
+    }
     delete user.metadata;
     return user;
   }
@@ -76,6 +87,11 @@ export class UserService {
   async getUser(filterQuery: Partial<User>): Promise<User> {
     const user: User = await this.usersRepository.findOne(filterQuery);
 
+    if (user.profile_picture) {
+      user.profile_picture = await this.azureBlobUtil.getTemporaryPublicUrl(
+        user.profile_picture,
+      );
+    }
     delete user.metadata;
     return user;
   }
@@ -100,8 +116,9 @@ export class UserService {
     request: Partial<User>,
     user: User,
   ): Promise<User> {
-    if (file)
+    if (file) {
       request.profile_picture = await this.azureBlobUtil.uploadImage(file);
+    }
     const updatedUser = await this.usersRepository.findOneAndUpdate(
       { _id: user._id },
       {
@@ -109,6 +126,14 @@ export class UserService {
         updated_at: new Date().toISOString(),
       },
     );
+
+    if (updatedUser.profile_picture) {
+      updatedUser.profile_picture =
+        await this.azureBlobUtil.getTemporaryPublicUrl(
+          updatedUser.profile_picture,
+        );
+    }
+
     delete updatedUser.metadata;
     return updatedUser;
   }

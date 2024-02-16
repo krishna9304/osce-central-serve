@@ -13,6 +13,7 @@ import { StationsRepository } from 'src/station/repositories/station.repository'
 import { Station, StationSchema } from 'src/station/schemas/station.schema';
 import { PatientRepository } from 'src/station/repositories/patient.repository';
 import { Patient, PatientSchema } from 'src/station/schemas/patient.schema';
+import { AzureBlobUtil } from 'src/utils/azureblob.util';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { Patient, PatientSchema } from 'src/station/schemas/patient.schema';
     ExamSessionsRepository,
     StationsRepository,
     PatientRepository,
+    AzureBlobUtil,
   ],
 })
 export class ChatModule {}

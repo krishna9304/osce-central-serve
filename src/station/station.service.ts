@@ -134,8 +134,8 @@ export class StationService {
 
     try {
       if (avatar) {
-        const avatarUrl = await this.azureBlobUtil.uploadImage(avatar);
-        patientRequestData.avatar = avatarUrl;
+        const avatarUploadName = await this.azureBlobUtil.uploadImage(avatar);
+        patientRequestData.avatar = avatarUploadName;
       }
 
       await this.patientRepository.create({
@@ -241,15 +241,25 @@ export class StationService {
 
   async getPatients(patientIds: string | null): Promise<Patient[]> {
     try {
-      let patients: Patient[] = [];
-      if (!patientIds) patients = await this.patientRepository.find({});
+      let patientDocs: Patient[] = [];
+      if (!patientIds) patientDocs = await this.patientRepository.find({});
       else {
         const listOfPatientIds = patientIds.split(',');
-        patients = await this.patientRepository.find({
+        patientDocs = await this.patientRepository.find({
           patientId: { $in: listOfPatientIds },
         });
       }
-      return patients;
+
+      for await (const patient of patientDocs) {
+        if (patient.avatar) {
+          const avatarURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+            patient.avatar,
+          );
+          patient.avatar = avatarURL;
+        }
+      }
+
+      return patientDocs;
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException(
@@ -326,30 +336,27 @@ export class StationService {
         associatedStation: { $in: stationIds },
       });
 
-      const stationsWithPatients = stations.map((station) => {
+      let stationsWithMetadata = [];
+      for await (let station of stations) {
         const stationPatients = patients.filter(
           (patient) => patient.associatedStation === station.stationId,
         );
-        return {
-          ...station,
-          metadata: {
-            patientName: stationPatients.length
-              ? stationPatients[0]['patientName']
-              : null,
-            patientAge: stationPatients.length
-              ? stationPatients[0]['age']
-              : null,
-            patientSex: stationPatients.length
-              ? stationPatients[0]['sex']
-              : null,
-            patientAvatar: stationPatients.length
-              ? stationPatients[0]['avatar']
-              : null,
-          },
-        };
-      });
+        if (stationPatients.length) {
+          stationsWithMetadata.push({
+            ...station,
+            metadata: {
+              patientName: stationPatients[0]['patientName'],
+              patientAge: stationPatients[0]['age'],
+              patientSex: stationPatients[0]['sex'],
+              patientAvatar: await this.azureBlobUtil.getTemporaryPublicUrl(
+                stationPatients[0]['avatar'],
+              ),
+            },
+          });
+        }
+      }
 
-      return stationsWithPatients;
+      return stationsWithMetadata;
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException(
@@ -372,6 +379,13 @@ export class StationService {
       const patient = await this.patientRepository.findOne({
         associatedStation: stationId,
       });
+
+      if (patient.avatar) {
+        const avatarURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+          patient.avatar,
+        );
+        patient.avatar = avatarURL;
+      }
 
       return patient;
     } catch (error) {
@@ -433,11 +447,16 @@ export class StationService {
         'Evaluation report is already generated for this session.',
       );
 
+    const station = await this.stationRepository.findOne({
+      stationId: session.stationId,
+    });
+
     this.prepareEvaluationResultsInBackgrond(
       session.sessionId,
       session.stationId,
       user.userId,
       user.name,
+      station.stationName,
     );
   }
 
@@ -446,6 +465,7 @@ export class StationService {
     stationId: string,
     userId: string,
     userName: string,
+    stationName: string,
   ): Promise<void> {
     this.socketService.updateReportGenerationProgress(userId, '10%');
 
@@ -541,6 +561,7 @@ export class StationService {
 
     await this.evaluationRepository.create({
       associatedSession: sessionId,
+      stationName: stationName,
       clinicalChecklist: markedClinicalChecklist,
       nonClinicalChecklist: markedNonClinicalChecklist,
       marksObtained: securedMarksOutOf12,
@@ -686,8 +707,8 @@ export class StationService {
           );
       }
       if (avatar) {
-        const avatarUrl = await this.azureBlobUtil.uploadImage(avatar);
-        patientRequestData.avatar = avatarUrl;
+        const avatarUploadName = await this.azureBlobUtil.uploadImage(avatar);
+        patientRequestData.avatar = avatarUploadName;
       }
 
       const updatedPatient = await this.patientRepository.findOneAndUpdate(

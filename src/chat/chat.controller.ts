@@ -1,4 +1,12 @@
-import { Controller, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/user/current-user.decorator';
 import { User } from 'src/user/schemas/user.schema';
@@ -46,6 +54,30 @@ export class ChatController {
     await this.chatService.trackFindingsRecord(sessionId, findingId, user);
 
     const res = new ApiResponse('Recorded succesfully.', null, 200, null);
+    return res.getResponse();
+  }
+
+  @Get('session-details/:sessionId')
+  @UseGuards(JwtAuthGuard)
+  async getSessionDetails(
+    @Param('sessionId') sessionId: string,
+    @CurrentUser() user: User,
+  ) {
+    const sessionDetails = await this.chatService.getSessionDetails(
+      sessionId,
+      user,
+    );
+
+    const res = new ApiResponse('Session details.', null, 200, sessionDetails);
+    return res.getResponse();
+  }
+
+  @Get('session-list')
+  @UseGuards(JwtAuthGuard)
+  async getSessionList(@CurrentUser() user: User) {
+    const sessionList = await this.chatService.getSessionList(user);
+
+    const res = new ApiResponse('Session list.', null, 200, sessionList);
     return res.getResponse();
   }
 }

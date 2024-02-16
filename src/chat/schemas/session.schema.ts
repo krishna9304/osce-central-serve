@@ -18,6 +18,7 @@ export interface FindingsRecord {
   finding: string;
   value: string;
   status: FindingStatus;
+  img?: string;
 }
 
 @Schema({ versionKey: false })
@@ -39,11 +40,11 @@ export class ExamSession extends AbstractDocument {
   @Prop({ default: ExamSessionStatus.ACTIVE })
   status: string;
 
-  @Prop({ default: Date.now() })
-  startTime: string;
+  @Prop({ default: null })
+  startTime: number;
 
   @Prop({ default: null })
-  endTime: string;
+  endTime: number;
 
   @Prop({ default: [] })
   findingsRecord: Array<FindingsRecord>;
@@ -64,5 +65,7 @@ ExamSessionSchema.pre('save', function (next) {
   this.sessionId = `${ExamSession.name}-${randomUUID()
     .replace('-', '')
     .slice(0, 10)}`;
+  this.startTime = Date.now();
+  this.endTime = Date.now() + 8 * 60 * 1000;
   next();
 });

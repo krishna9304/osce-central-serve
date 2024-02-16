@@ -9,7 +9,7 @@ export interface Conversation {
 }
 
 export interface Findings {
-  image: string | null;
+  image?: string;
   name: string;
   value: string;
 }

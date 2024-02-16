@@ -23,6 +23,9 @@ export class Evaluation extends AbstractDocument {
   })
   evaluationId: string;
 
+  @Prop({ required: true })
+  stationName: string;
+
   @Prop({ default: 0 })
   marksObtained: number;
 
