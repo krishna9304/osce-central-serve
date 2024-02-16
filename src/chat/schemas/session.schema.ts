@@ -8,6 +8,18 @@ export enum ExamSessionStatus {
   COMPLETED = 'completed',
 }
 
+export enum FindingStatus {
+  PENDING = 'pending',
+  COMPLETED = 'completed',
+}
+
+export interface FindingsRecord {
+  id: string;
+  finding: string;
+  value: string;
+  status: FindingStatus;
+}
+
 @Schema({ versionKey: false })
 export class ExamSession extends AbstractDocument {
   _id: Types.ObjectId;
@@ -32,6 +44,9 @@ export class ExamSession extends AbstractDocument {
 
   @Prop({ default: null })
   endTime: string;
+
+  @Prop({ default: [] })
+  findingsRecord: Array<FindingsRecord>;
 
   @Prop({ default: new Date().toISOString() })
   created_at: string;

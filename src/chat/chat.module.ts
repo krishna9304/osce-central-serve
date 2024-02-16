@@ -11,6 +11,8 @@ import { ChatsRepository } from './repositories/chat.repository';
 import { ExamSessionsRepository } from './repositories/examSession.repository';
 import { StationsRepository } from 'src/station/repositories/station.repository';
 import { Station, StationSchema } from 'src/station/schemas/station.schema';
+import { PatientRepository } from 'src/station/repositories/patient.repository';
+import { Patient, PatientSchema } from 'src/station/schemas/patient.schema';
 
 @Module({
   imports: [
@@ -19,6 +21,7 @@ import { Station, StationSchema } from 'src/station/schemas/station.schema';
       { name: ExamSession.name, schema: ExamSessionSchema },
     ]),
     MongooseModule.forFeature([{ name: Station.name, schema: StationSchema }]),
+    MongooseModule.forFeature([{ name: Patient.name, schema: PatientSchema }]),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     forwardRef(() => AuthModule),
   ],
@@ -29,6 +32,7 @@ import { Station, StationSchema } from 'src/station/schemas/station.schema';
     ChatsRepository,
     ExamSessionsRepository,
     StationsRepository,
+    PatientRepository,
   ],
 })
 export class ChatModule {}

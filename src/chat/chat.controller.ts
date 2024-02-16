@@ -20,8 +20,7 @@ export class ChatController {
       user,
     );
 
-    const res = new ApiResponse('Session started', null, 201, examSession);
-
+    const res = new ApiResponse('Session started.', null, 201, examSession);
     return res.getResponse();
   }
 
@@ -34,7 +33,19 @@ export class ChatController {
     await this.chatService.endExamSession(sessionId, user);
 
     const res = new ApiResponse('Session ended.', null, 200, null);
+    return res.getResponse();
+  }
 
+  @Put('findings-track/:sessionId/:findingId')
+  @UseGuards(JwtAuthGuard)
+  async updateFindingsRecord(
+    @Param('sessionId') sessionId: string,
+    @Param('findingId') findingId: string,
+    @CurrentUser() user: User,
+  ) {
+    await this.chatService.trackFindingsRecord(sessionId, findingId, user);
+
+    const res = new ApiResponse('Recorded succesfully.', null, 200, null);
     return res.getResponse();
   }
 }
