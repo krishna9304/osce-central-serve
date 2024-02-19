@@ -14,6 +14,11 @@ export interface Findings {
   value: string;
 }
 
+export interface ContextualParam {
+  heading: string;
+  description: string;
+}
+
 @Schema({ versionKey: false })
 export class Patient extends AbstractDocument {
   _id: Types.ObjectId;
@@ -48,47 +53,8 @@ export class Patient extends AbstractDocument {
   @Prop({ required: true })
   historyOfPresentingComplaint: string;
 
-  @Prop({ required: true })
-  pastMedicalHistory: string;
-
-  @Prop({ required: true })
-  medicationHistory: string;
-
-  @Prop({ required: true })
-  allergiesHistory: string;
-
-  @Prop({ required: true })
-  familyHistory: string;
-
-  @Prop({ required: true })
-  travelHistory: string;
-
-  @Prop({ required: true })
-  occupationalHistory: string;
-
-  @Prop({ required: true })
-  socialHistory: string;
-
-  @Prop({ required: true })
-  smokingHistory: string;
-
-  @Prop({ required: true })
-  alcoholHistory: string;
-
-  @Prop({ required: true })
-  surgicalHistory: string;
-
-  @Prop({ required: true })
-  drivingHistory: string;
-
-  @Prop({ required: true })
-  sexualHistory: string;
-
-  @Prop({ required: true })
-  recreationalDrugHistory: string;
-
-  @Prop({ required: true })
-  stressorsInLife: string;
+  @Prop({ default: [] })
+  additionalContextualParameters: Array<ContextualParam>;
 
   @Prop({ required: true })
   ideasConcernsExpectations: string;
@@ -99,14 +65,14 @@ export class Patient extends AbstractDocument {
   @Prop({ required: true })
   associatedStation: string;
 
-  @Prop({ default: null })
-  additionalInstructions: string;
-
   @Prop({ default: [] })
   findings: Array<Findings>;
 
   @Prop({ required: true })
   voiceId11Labs: string;
+
+  @Prop({ default: '' })
+  patientSpecificAdditionalInstructions: string;
 
   @Prop({ default: new Date().toISOString() })
   created_at: string;

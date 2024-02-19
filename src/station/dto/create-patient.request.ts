@@ -1,5 +1,5 @@
 import { IsArray, IsNotEmpty, IsNumberString, IsString } from 'class-validator';
-import { Findings } from '../schemas/patient.schema';
+import { ContextualParam, Findings } from '../schemas/patient.schema';
 
 export class CreatePatientRequest {
   patientId: string;
@@ -35,60 +35,8 @@ export class CreatePatientRequest {
   historyOfPresentingComplaint: string;
 
   @IsNotEmpty()
-  @IsString()
-  pastMedicalHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  medicationHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  allergiesHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  familyHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  travelHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  occupationalHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  socialHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  smokingHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  alcoholHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  surgicalHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  drivingHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  sexualHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  recreationalDrugHistory: string;
-
-  @IsNotEmpty()
-  @IsString()
-  stressorsInLife: string;
+  @IsArray()
+  additionalContextualParameters: Array<ContextualParam>;
 
   @IsNotEmpty()
   @IsString()
@@ -102,14 +50,15 @@ export class CreatePatientRequest {
   @IsString()
   associatedStation: string;
 
-  additionalInstructions: string;
+  @IsArray()
+  findings: Array<Findings>;
 
   @IsNotEmpty()
   @IsString()
   voiceId11Labs: string;
 
-  @IsArray()
-  findings: Array<Findings>;
+  @IsString()
+  patientSpecificAdditionalInstructions: string;
 
   created_at: string;
 

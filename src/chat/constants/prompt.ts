@@ -50,76 +50,11 @@ export const getInitalPatientPrompt = (user: User, patient: Patient) => {
       content: `History of presenting complaint:\n
                     ${patient.historyOfPresentingComplaint}`,
     },
-    {
+    ...patient.additionalContextualParameters.map((param) => ({
       role: 'system',
-      content: `Past medical history:\n
-                    ${patient.pastMedicalHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Medication history:\n
-                    ${patient.medicationHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Allergies history:\n
-                    ${patient.allergiesHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Family history:\n
-                    ${patient.familyHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Travel history:\n
-                    ${patient.travelHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Occupational history:\n
-                    ${patient.occupationalHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Social history:\n
-                    ${patient.socialHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Smoking history:\n
-                    ${patient.smokingHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Alcohol history:\n
-                    ${patient.alcoholHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Surgical history:\n
-                    ${patient.surgicalHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Driving history:\n
-                    ${patient.drivingHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Sexual history:\n
-                    ${patient.sexualHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Recreational drug history:\n
-                    ${patient.recreationalDrugHistory}`,
-    },
-    {
-      role: 'system',
-      content: `Stressors in life:\n
-                    ${patient.stressorsInLife}`,
-    },
+      content: `${param.heading}:\n
+                    ${param.description}`,
+    })),
     {
       role: 'system',
       content: `Ideas, concerns, expectations about your current situation:\n
@@ -140,7 +75,22 @@ export const getInitalPatientPrompt = (user: User, patient: Patient) => {
     },
     {
       role: 'system',
-      content: `The above are some example conversations only. Please do not use the exact sentences while roleplaying the character of ${patient.patientName}. Always remember that you're here to seek help, In your response don't use phrases like - "I'm an AI, how can I help you?" or "How may I assist you today?" or "How can I help you today?".\n`,
+      content: `The above are some example conversations only. Please do not use the exact sentences while roleplaying the character.`,
+    },
+    {
+      role: 'system',
+      content: `Always remember that you're here to seek help, In your response don't use phrases like - "I'm an AI, how can I help you?" or "How may I assist you today?" or "How can I help you today?".\n`,
+    },
+    {
+      role: 'system',
+      content: `PATIENT SPECIFIC ADDITIONAL INSTRUCTIONS:\n
+                    ${patient.patientSpecificAdditionalInstructions}`,
+    },
+    {
+      role: 'system',
+      content: `You're now ready to roleplay the character of ${
+        patient.patientName
+      } and seek help from Dr. ${user.name.split(' ')[0]}.`,
     },
   ];
 
