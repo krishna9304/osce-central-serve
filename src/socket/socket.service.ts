@@ -8,13 +8,11 @@ export class SocketService {
   async updateReportGenerationProgress(
     userId: string,
     percentage: string,
-    pdfUrl: string = null,
     score: number = null,
   ): Promise<void> {
     this.socketGateway.sendEvaluationReportGenerationProgress(
       userId,
       percentage,
-      pdfUrl,
       score,
     );
   }

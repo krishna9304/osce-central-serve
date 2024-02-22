@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { OpenAiUtil } from './openai.util';
 import { UtilController } from './util.controller';
+import { ElevenLabsUtil } from './elevenlabs.util';
 
 @Module({
   imports: [
@@ -13,12 +14,13 @@ import { UtilController } from './util.controller';
         AZURE_BLOB_CONNECTION_STRING: Joi.string().required(),
         AZURE_BLOB_CONTAINER_NAME: Joi.string().required(),
         OPENAI_API_KEY: Joi.string().required(),
+        ELEVEN_LABS_API_KEY: Joi.string().required(),
       }),
       envFilePath: '.env',
     }),
   ],
   controllers: [UtilController],
-  providers: [AzureBlobUtil, OpenAiUtil],
-  exports: [AzureBlobUtil, OpenAiUtil],
+  providers: [AzureBlobUtil, OpenAiUtil, ElevenLabsUtil],
+  exports: [AzureBlobUtil, OpenAiUtil, ElevenLabsUtil],
 })
 export class UtilModule {}

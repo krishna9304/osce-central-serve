@@ -569,7 +569,6 @@ export class StationService {
     this.socketService.updateReportGenerationProgress(
       userId,
       '100%',
-      null,
       securedMarksOutOf12,
     );
   }
