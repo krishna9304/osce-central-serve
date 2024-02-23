@@ -42,13 +42,9 @@ export class OpenAiUtil {
         temperature: this.temperature,
         stream: true,
       },
-      { headers: this.headers },
+      { headers: this.headers, responseType: 'stream' },
     );
-    const data = response.data
-      .split('\n')
-      .filter((s) => s != '' && !s.includes('[DONE]'))
-      .map((t) => JSON.parse(t.slice(6, t.length)));
 
-    return data;
+    return response;
   }
 }

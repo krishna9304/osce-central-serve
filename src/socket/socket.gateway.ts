@@ -137,17 +137,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         content,
       } as Chat);
 
-      const fullMessage = await this.callOpenAIChatCompletionApi(
+      await this.callOpenAIChatCompletionAnd11LabsVoiceApi(
         client,
         prompt,
         patient.voiceId11Labs,
-      );
-
-      await this.chatsRepository.create({
         sessionId,
-        role: 'assistant',
-        content: fullMessage,
-      } as Chat);
+      );
     } catch (error) {
       client.emit('ERROR', {
         msg: error.message,
@@ -187,43 +182,65 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  async callOpenAIChatCompletionApi(
+  async callOpenAIChatCompletionAnd11LabsVoiceApi(
     client: Socket,
     prompt: Array<{ role: string; content: string }>,
     voiceId: string,
+    sessionId: string,
   ) {
     try {
-      const data = await this.openAiUtil.getChatCompletionsStream(prompt);
-      let fullMessage = [];
-      for (let i = 0; i < data.length - 1; i++) {
-        const chunk = data[i];
-        const msg = chunk.choices[0].delta.content;
-        fullMessage.push(msg);
-      }
+      const opResponse = await this.openAiUtil.getChatCompletionsStream(prompt);
+      let textBuffer = Buffer.from([]);
+      opResponse.data.on('data', (chunk) => {
+        textBuffer = Buffer.concat([textBuffer, chunk]);
+      });
 
-      const message = fullMessage.join('');
-      const response = await this.elevenLabsUtil.getAudioStream(
-        message,
-        voiceId,
-      );
-      let audioBuffer = Buffer.from([]);
-      response.data.on('data', (chunk) => {
-        audioBuffer = Buffer.concat([audioBuffer, chunk]);
-      });
-      response.data.on('end', () => {
-        client.emit('RECEIVE_CHAT_COMPLETION', {
-          msg: message,
-          audioBuffer: audioBuffer.toString('base64'),
+      opResponse.data.on('end', async () => {
+        const data = textBuffer
+          .toString()
+          .split('\n')
+          .filter((s) => s != '' && !s.includes('[DONE]'))
+          .map((t) => JSON.parse(t.slice(6, t.length)));
+
+        const fullMessage = data
+          .map((chunk) => chunk.choices[0].delta.content)
+          .join('');
+
+        const elResponse = await this.elevenLabsUtil.getAudioStream(
+          fullMessage,
+          voiceId,
+        );
+        let audioBuffer = Buffer.from([]);
+        elResponse.data.on('data', (chunk) => {
+          audioBuffer = Buffer.concat([audioBuffer, chunk]);
         });
+
+        elResponse.data.on('end', async () => {
+          client.emit('RECEIVE_CHAT_COMPLETION', {
+            msg: fullMessage,
+            audioBuffer: audioBuffer.toString('base64'),
+          });
+        });
+        elResponse.data.on('error', (error) => {
+          this.logger.error(error);
+          client.emit('ERROR', {
+            msg: error.message,
+          });
+        });
+
+        await this.chatsRepository.create({
+          sessionId,
+          role: 'assistant',
+          content: fullMessage,
+        } as Chat);
       });
-      response.data.on('error', (error) => {
+
+      opResponse.data.on('error', (error) => {
         this.logger.error(error);
         client.emit('ERROR', {
           msg: error.message,
         });
       });
-
-      return message;
     } catch (error) {
       this.logger.error(error);
       client.emit('ERROR', {
