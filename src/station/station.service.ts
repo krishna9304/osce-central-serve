@@ -348,9 +348,11 @@ export class StationService {
               patientName: stationPatients[0]['patientName'],
               patientAge: stationPatients[0]['age'],
               patientSex: stationPatients[0]['sex'],
-              patientAvatar: await this.azureBlobUtil.getTemporaryPublicUrl(
-                stationPatients[0]['avatar'],
-              ),
+              patientAvatar: stationPatients[0]['avatar']
+                ? await this.azureBlobUtil.getTemporaryPublicUrl(
+                    stationPatients[0]['avatar'],
+                  )
+                : null,
             },
           });
         }

@@ -4,7 +4,7 @@ import {
   BlockBlobClient,
   ContainerClient,
 } from '@azure/storage-blob';
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as sharp from 'sharp';
 
@@ -91,6 +91,9 @@ export class AzureBlobUtil {
   async getTemporaryPublicUrl(filename: string) {
     try {
       const blockBlobClient = this.getBlockBlobClient(filename);
+      const blobExists = await blockBlobClient.exists();
+      if (!blobExists) throw new Error('File not found.');
+
       const sasUrl = await blockBlobClient.generateSasUrl({
         permissions: BlobSASPermissions.parse('r'),
         startsOn: new Date(),
@@ -98,7 +101,7 @@ export class AzureBlobUtil {
       });
       return sasUrl;
     } catch (error) {
-      throw new Error(error);
+      throw new NotFoundException(error.message);
     }
   }
 }
