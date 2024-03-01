@@ -18,6 +18,7 @@ export interface FindingsRecord {
   finding: string;
   value: string;
   status: FindingStatus;
+  marks: number;
   img?: string;
 }
 

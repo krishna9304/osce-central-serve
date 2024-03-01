@@ -12,6 +12,7 @@ export interface Findings {
   image?: string;
   name: string;
   value: string;
+  marks: number;
 }
 
 export interface ContextualParam {

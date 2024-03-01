@@ -69,6 +69,7 @@ export class ChatService {
         finding: finding.name,
         value: finding.value,
         img: finding.image,
+        marks: finding.marks,
         status: FindingStatus.PENDING,
       });
     }
@@ -82,7 +83,18 @@ export class ChatService {
     const createdExamSession =
       await this.examSessionsRepository.create(examSessionData);
 
-    return createdExamSession;
+    return {
+      ...createdExamSession,
+      metadata: {
+        patientName: patient.patientName,
+        stationName: stationId,
+        patientAge: patient.age,
+        patientSex: patient.sex,
+        avatar: patient.avatar
+          ? await this.azureBlobUtil.getTemporaryPublicUrl(patient.avatar)
+          : null,
+      },
+    };
   }
 
   async endExamSession(sessionId: string, user: User): Promise<void> {
@@ -183,6 +195,23 @@ export class ChatService {
         associatedUser: user.userId,
       });
 
+      const patient = await this.patientsRepository.findOne({
+        associatedStation: session.stationId,
+      });
+      const station = await this.stationsRepository.findOne({
+        stationId: session.stationId,
+      });
+
+      session.metadata = {
+        patientName: patient.patientName,
+        stationName: station.stationName,
+        patientAge: patient.age,
+        patientSex: patient.sex,
+        avatar: patient.avatar
+          ? await this.azureBlobUtil.getTemporaryPublicUrl(patient.avatar)
+          : null,
+      };
+
       return session;
     } catch (error) {
       throw new InternalServerErrorException(
@@ -197,7 +226,30 @@ export class ChatService {
         associatedUser: user.userId,
       });
 
-      return sessions;
+      const sessionsWithPatientDetails = [];
+      for await (const session of sessions) {
+        const patient = await this.patientsRepository.findOne({
+          associatedStation: session.stationId,
+        });
+        const station = await this.stationsRepository.findOne({
+          stationId: session.stationId,
+        });
+
+        sessionsWithPatientDetails.push({
+          ...session,
+          metadata: {
+            patientName: patient.patientName,
+            stationName: station.stationName,
+            patientAge: patient.age,
+            patientSex: patient.sex,
+            avatar: patient.avatar
+              ? await this.azureBlobUtil.getTemporaryPublicUrl(patient.avatar)
+              : null,
+          },
+        });
+      }
+
+      return sessionsWithPatientDetails;
     } catch (error) {
       throw new InternalServerErrorException(
         error.message || "Something went wrong. Coundn't get session list.",
