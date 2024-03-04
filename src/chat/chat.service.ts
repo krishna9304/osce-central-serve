@@ -15,12 +15,14 @@ import { StationsRepository } from 'src/station/repositories/station.repository'
 import { PatientRepository } from 'src/station/repositories/patient.repository';
 import { randomUUID } from 'crypto';
 import { AzureBlobUtil } from 'src/utils/azureblob.util';
+import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
 
 @Injectable()
 export class ChatService {
   constructor(
     private readonly examSessionsRepository: ExamSessionsRepository,
     private readonly stationsRepository: StationsRepository,
+    private readonly evaluationRepository: EvaluationRepository,
     private readonly patientsRepository: PatientRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
   ) {}
@@ -70,6 +72,7 @@ export class ChatService {
         value: finding.value,
         img: finding.image,
         marks: finding.marks,
+        subcategory: finding.subcategory,
         status: FindingStatus.PENDING,
       });
     }
@@ -234,7 +237,9 @@ export class ChatService {
         const station = await this.stationsRepository.findOne({
           stationId: session.stationId,
         });
-
+        const evaluationExists = await this.evaluationRepository.exists({
+          associatedSession: session.sessionId,
+        });
         sessionsWithPatientDetails.push({
           ...session,
           metadata: {
@@ -245,6 +250,7 @@ export class ChatService {
             avatar: patient.avatar
               ? await this.azureBlobUtil.getTemporaryPublicUrl(patient.avatar)
               : null,
+            evaluated: evaluationExists ? true : false,
           },
         });
       }

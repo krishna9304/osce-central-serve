@@ -13,6 +13,7 @@ export interface Findings {
   name: string;
   value: string;
   marks: number;
+  subcategory: string;
 }
 
 export interface ContextualParam {

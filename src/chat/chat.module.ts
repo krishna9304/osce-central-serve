@@ -14,6 +14,11 @@ import { Station, StationSchema } from 'src/station/schemas/station.schema';
 import { PatientRepository } from 'src/station/repositories/patient.repository';
 import { Patient, PatientSchema } from 'src/station/schemas/patient.schema';
 import { AzureBlobUtil } from 'src/utils/azureblob.util';
+import {
+  Evaluation,
+  EvaluationSchema,
+} from 'src/station/schemas/evaluation.schema';
+import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
 
 @Module({
   imports: [
@@ -24,6 +29,9 @@ import { AzureBlobUtil } from 'src/utils/azureblob.util';
     MongooseModule.forFeature([{ name: Station.name, schema: StationSchema }]),
     MongooseModule.forFeature([{ name: Patient.name, schema: PatientSchema }]),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: Evaluation.name, schema: EvaluationSchema },
+    ]),
     forwardRef(() => AuthModule),
   ],
   controllers: [ChatController],
@@ -32,6 +40,7 @@ import { AzureBlobUtil } from 'src/utils/azureblob.util';
     UsersRepository,
     ChatsRepository,
     ExamSessionsRepository,
+    EvaluationRepository,
     StationsRepository,
     PatientRepository,
     AzureBlobUtil,
