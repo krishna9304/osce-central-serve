@@ -38,8 +38,6 @@ export class CreatePatientRequest {
   @IsArray()
   additionalContextualParameters: Array<ContextualParam>;
 
-  @IsNotEmpty()
-  @IsString()
   ideasConcernsExpectations: string;
 
   @IsNotEmpty()
@@ -57,7 +55,6 @@ export class CreatePatientRequest {
   @IsString()
   voiceId11Labs: string;
 
-  @IsString()
   patientSpecificAdditionalInstructions: string;
 
   created_at: string;

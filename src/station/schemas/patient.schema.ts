@@ -57,7 +57,7 @@ export class Patient extends AbstractDocument {
   @Prop({ default: [] })
   additionalContextualParameters: Array<ContextualParam>;
 
-  @Prop({ required: true })
+  @Prop({ default: '' })
   ideasConcernsExpectations: string;
 
   @Prop({ required: true })
