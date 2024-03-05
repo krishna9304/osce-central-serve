@@ -11,7 +11,7 @@ export class OpenAiUtil {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${this.configService.get<string>('OPENAI_API_KEY')}`,
   };
-  model = 'gpt-4';
+  model = 'gpt-3.5-turbo-0125';
   max_tokens = 200;
   temperature = 0.7;
 
