@@ -84,9 +84,12 @@ export class UserService {
     );
   }
 
-  async getUser(filterQuery: Partial<User>): Promise<User> {
+  async getUser(filterQuery: Partial<User>): Promise<User | null> {
+    const userExists = await this.usersRepository.exists(filterQuery);
+    if (!userExists) {
+      return null;
+    }
     const user: User = await this.usersRepository.findOne(filterQuery);
-
     if (user.profile_picture) {
       user.profile_picture = await this.azureBlobUtil.getTemporaryPublicUrl(
         user.profile_picture,
