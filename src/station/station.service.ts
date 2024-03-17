@@ -355,6 +355,8 @@ export class StationService {
                 : null,
             },
           });
+        } else {
+          stationsWithMetadata.push(station);
         }
       }
 
