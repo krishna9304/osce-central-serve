@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
   Put,
+  Query,
   UnauthorizedException,
   UnprocessableEntityException,
   UploadedFile,
@@ -21,6 +23,27 @@ import { isPhoneNumber } from 'class-validator';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  async getUsers(
+    @CurrentUser() user: User,
+    @Query('userIds') userIds: string | null,
+  ): Promise<ApiResponseType> {
+    if (user.role !== 'admin') {
+      throw new UnauthorizedException(
+        'You are not allowed to view other user details.',
+      );
+    }
+    const users = await this.userService.getUsers(userIds);
+    const res = new ApiResponse(
+      'User details fetched successfully.',
+      null,
+      200,
+      users,
+    );
+    return res.getResponse();
+  }
 
   @Post('create')
   @UseGuards(JwtAuthGuard)

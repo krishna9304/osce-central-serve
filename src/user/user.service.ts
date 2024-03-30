@@ -179,4 +179,24 @@ export class UserService {
     delete userCreated.metadata;
     return userCreated;
   }
+
+  async getUsers(userIds: string | null): Promise<User[]> {
+    let users = [];
+    if (!userIds) users = await this.usersRepository.find({});
+    else {
+      const userIdsList = userIds.split(',');
+      users = await this.usersRepository.find({ _id: { $in: userIdsList } });
+    }
+
+    for (let user of users) {
+      if (user.profile_picture) {
+        user.profile_picture = await this.azureBlobUtil.getTemporaryPublicUrl(
+          user.profile_picture,
+        );
+      }
+      delete user.metadata;
+    }
+
+    return users;
+  }
 }
