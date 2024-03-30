@@ -101,7 +101,9 @@ export class AzureBlobUtil {
       });
       return sasUrl;
     } catch (error) {
-      throw new NotFoundException(error.message);
+      throw new NotFoundException(
+        'Requested blob does not exist: ' + error.message,
+      );
     }
   }
 }

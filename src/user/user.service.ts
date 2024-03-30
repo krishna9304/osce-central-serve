@@ -121,6 +121,8 @@ export class UserService {
   ): Promise<User> {
     if (file) {
       request.profile_picture = await this.azureBlobUtil.uploadImage(file);
+    } else if (request.profile_picture) {
+      await this.azureBlobUtil.getTemporaryPublicUrl(request.profile_picture);
     }
     const updatedUser = await this.usersRepository.findOneAndUpdate(
       { _id: user._id },
@@ -139,5 +141,42 @@ export class UserService {
 
     delete updatedUser.metadata;
     return updatedUser;
+  }
+
+  validateUpdateProfileRequest(request: Partial<User>, user: User): string[] {
+    if (user.role === 'admin') return [];
+    const restrictedFields = [
+      'phone',
+      'phone_verified',
+      'email_verified',
+      'metadata',
+      'status',
+      'created_at',
+      'updated_at',
+      'userId',
+      'role',
+    ];
+
+    let errors = [];
+    for (let field of restrictedFields) {
+      if (request[field]) {
+        errors.push(field);
+        delete request[field];
+      }
+    }
+
+    return errors;
+  }
+
+  async createUserByAdmin(file, request: CreateUserRequest): Promise<User> {
+    await this.validateCreateUserRequest(request);
+    if (file)
+      request.profile_picture = await this.azureBlobUtil.uploadImage(file);
+    else if (request.profile_picture) {
+      await this.azureBlobUtil.getTemporaryPublicUrl(request.profile_picture);
+    }
+    const userCreated = await this.usersRepository.create(request);
+    delete userCreated.metadata;
+    return userCreated;
   }
 }
