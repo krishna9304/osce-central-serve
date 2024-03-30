@@ -185,7 +185,7 @@ export class UserService {
     if (!userIds) users = await this.usersRepository.find({});
     else {
       const userIdsList = userIds.split(',');
-      users = await this.usersRepository.find({ _id: { $in: userIdsList } });
+      users = await this.usersRepository.find({ userId: { $in: userIdsList } });
     }
 
     for (let user of users) {
