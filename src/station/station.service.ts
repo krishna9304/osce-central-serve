@@ -506,75 +506,84 @@ export class StationService {
       chats,
     );
 
-    // ****************Clinical Checklist Marking***************
-    let totalClinicalMarks = 0;
-    let securedMarks = 0;
-    let userPromptPrefix =
-      'Analyze the given conversation and answer the given question: \n';
-    const markedClinicalChecklist: Array<ClinicalChecklistMarkingItem> = [];
-    for await (const clinicalChecklistItem of evaluator.clinicalChecklist) {
-      const evaluatorUserPrompt =
-        userPromptPrefix +
-        `Did Dr. ${userFirstName} ${clinicalChecklistItem.question} ?`;
-      const options = ['Yes', 'No'];
-      const res = await axios.post(evaluateServerURL, {
-        systemPrompt: evaluatorSystemPrompt,
-        userPrompt: evaluatorUserPrompt,
-        options,
-      });
-      markedClinicalChecklist.push({
-        question: clinicalChecklistItem.question,
-        score: res.data.data === 'Yes' ? clinicalChecklistItem.marks : 0,
-      });
-      totalClinicalMarks += clinicalChecklistItem.marks;
-      securedMarks += res.data.data === 'Yes' ? clinicalChecklistItem.marks : 0;
+    try {
+      // ****************Clinical Checklist Marking***************
+      let totalClinicalMarks = 0;
+      let securedMarks = 0;
+      let userPromptPrefix =
+        'Analyze the given conversation and answer the given question: \n';
+      const markedClinicalChecklist: Array<ClinicalChecklistMarkingItem> = [];
+      for await (const clinicalChecklistItem of evaluator.clinicalChecklist) {
+        const evaluatorUserPrompt =
+          userPromptPrefix +
+          `Did Dr. ${userFirstName} ${clinicalChecklistItem.question} ?`;
+        const options = ['Yes', 'No'];
+        const res = await axios.post(evaluateServerURL, {
+          systemPrompt: evaluatorSystemPrompt,
+          userPrompt: evaluatorUserPrompt,
+          options,
+        });
+        markedClinicalChecklist.push({
+          question: clinicalChecklistItem.question,
+          score: res.data.data === 'Yes' ? clinicalChecklistItem.marks : 0,
+        });
+        totalClinicalMarks += clinicalChecklistItem.marks;
+        securedMarks +=
+          res.data.data === 'Yes' ? clinicalChecklistItem.marks : 0;
+      }
+      this.socketService.updateReportGenerationProgress(userId, '60%');
+
+      // **************Non-Clinical Checklist Marking*************
+      let totalNonClinicalMarks = 0;
+      userPromptPrefix =
+        'Analyze the given conversation and provide marks for given question: \n';
+      const markedNonClinicalChecklist: Array<NonClinicalChecklistMarkingItem> =
+        [];
+      for await (const nonClinicalChecklistItem of NonClinicalChecklist) {
+        const evaluatorUserPrompt =
+          userPromptPrefix +
+          getUserPromptForNonClinicalChecklist(
+            nonClinicalChecklistItem,
+            userFirstName,
+          );
+        const options = [1, 2, 3, 4, 5];
+        const res = await axios.post(evaluateServerURL, {
+          systemPrompt: evaluatorSystemPrompt,
+          userPrompt: evaluatorUserPrompt,
+          options,
+        });
+        markedNonClinicalChecklist.push({
+          label: nonClinicalChecklistItem.label,
+          score: parseInt(res.data.data),
+        });
+        totalNonClinicalMarks += 5;
+        securedMarks += parseInt(res.data.data);
+      }
+      this.socketService.updateReportGenerationProgress(userId, '80%');
+      // ************************************************************
+
+      const totalSecurableMarks = totalClinicalMarks + totalNonClinicalMarks;
+      const securedMarksOutOf12 = (securedMarks / totalSecurableMarks) * 12;
+
+      await this.evaluationRepository.create({
+        associatedSession: sessionId,
+        stationName: stationName,
+        clinicalChecklist: markedClinicalChecklist,
+        nonClinicalChecklist: markedNonClinicalChecklist,
+        marksObtained: securedMarksOutOf12,
+      } as Evaluation);
+      this.socketService.updateReportGenerationProgress(
+        userId,
+        '100%',
+        securedMarksOutOf12,
+      );
+    } catch (error) {
+      this.socketService.updateReportGenerationProgress(userId, '100%', 0);
+      console.log(
+        'There is some error caused while producing the evaluation',
+        error,
+      );
     }
-    this.socketService.updateReportGenerationProgress(userId, '60%');
-
-    // **************Non-Clinical Checklist Marking*************
-    let totalNonClinicalMarks = 0;
-    userPromptPrefix =
-      'Analyze the given conversation and provide marks for given question: \n';
-    const markedNonClinicalChecklist: Array<NonClinicalChecklistMarkingItem> =
-      [];
-    for await (const nonClinicalChecklistItem of NonClinicalChecklist) {
-      const evaluatorUserPrompt =
-        userPromptPrefix +
-        getUserPromptForNonClinicalChecklist(
-          nonClinicalChecklistItem,
-          userFirstName,
-        );
-      const options = [1, 2, 3, 4, 5];
-      const res = await axios.post(evaluateServerURL, {
-        systemPrompt: evaluatorSystemPrompt,
-        userPrompt: evaluatorUserPrompt,
-        options,
-      });
-      markedNonClinicalChecklist.push({
-        label: nonClinicalChecklistItem.label,
-        score: parseInt(res.data.data),
-      });
-      totalNonClinicalMarks += 5;
-      securedMarks += parseInt(res.data.data);
-    }
-    this.socketService.updateReportGenerationProgress(userId, '80%');
-    // ************************************************************
-
-    const totalSecurableMarks = totalClinicalMarks + totalNonClinicalMarks;
-    const securedMarksOutOf12 = (securedMarks / totalSecurableMarks) * 12;
-
-    await this.evaluationRepository.create({
-      associatedSession: sessionId,
-      stationName: stationName,
-      clinicalChecklist: markedClinicalChecklist,
-      nonClinicalChecklist: markedNonClinicalChecklist,
-      marksObtained: securedMarksOutOf12,
-    } as Evaluation);
-    this.socketService.updateReportGenerationProgress(
-      userId,
-      '100%',
-      securedMarksOutOf12,
-    );
   }
 
   async getEvaluationReport(
