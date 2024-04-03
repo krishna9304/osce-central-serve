@@ -101,9 +101,16 @@ export const getEvaluatorSystemPrompt = (
   chats: Array<Chat>,
 ) => {
   const evaluatorSystemPrompt = `
-    You're a medical expert and have years of experience dealing with patients. You're here to evaluate the performance of Dr. ${userFirstName} and provide a marked evaluation report based on how he/she had a conversation with a patient named ${patientName} who came to seek help regarding their medical situation.
-    You are also a critic in the medical field and you give very precise feedback to doctors who're in practice.
-    Following is the complete consultation conversation between Dr. ${userFirstName} and ${patientName}:\n
+    You are a mere observer to a consultation session between Dr. ${userFirstName} and ${patientName}. You have listened to the entire conversation and 
+    have noted the whole script of the consultation below. Now, while answering to any question related to the consultation, you will refer to the below 
+    script of the conversation and answer the questions accordingly. Please follow the below guidelines:\n
+    - You will be impartial when answering the questions.\n
+    - You will not provide any additional information apart from the script of the conversation.\n
+    - You will give the answers based on the script of the conversation and to-the-point according to whatever is asked.\n
+    - You will not provide any personal opinions or suggestions.\n
+    - A guidance library is used to generate the exact answer based on certain keywords. You will not deviate from the generated answer.\n
+    
+    \nThe script of the conversation is as follows:\n
     ${chats.map((chat) =>
       chat.role === 'user'
         ? 'Dr. ' + userFirstName + ': ' + chat.content + '\n'

@@ -38,6 +38,7 @@ import { SocketService } from 'src/socket/socket.service';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { NonClinicalChecklist } from './assets/checklist';
+import { OpenAiUtil } from 'src/utils/openai.util';
 
 @Injectable()
 export class StationService {
@@ -48,6 +49,7 @@ export class StationService {
     private readonly patientRepository: PatientRepository,
     private readonly evaluatorRepository: EvaluatorRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
+    private readonly openAiUtil: OpenAiUtil,
     private readonly examSessionsRepository: ExamSessionsRepository,
     private readonly chatsRepository: ChatsRepository,
     private readonly evaluationRepository: EvaluationRepository,
@@ -510,13 +512,11 @@ export class StationService {
       // ****************Clinical Checklist Marking***************
       let totalClinicalMarks = 0;
       let securedMarks = 0;
-      let userPromptPrefix =
-        'Analyze the given conversation and answer the given question: \n';
+      let userPromptPrefix = `Hi Mr. Observer. Please tell me whether the following activity happened during the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
       const markedClinicalChecklist: Array<ClinicalChecklistMarkingItem> = [];
       for await (const clinicalChecklistItem of evaluator.clinicalChecklist) {
         const evaluatorUserPrompt =
-          userPromptPrefix +
-          `Did Dr. ${userFirstName} ${clinicalChecklistItem.question} ?`;
+          userPromptPrefix + clinicalChecklistItem.question;
         const options = ['Yes', 'No'];
         const res = await axios.post(evaluateServerURL, {
           systemPrompt: evaluatorSystemPrompt,
@@ -534,35 +534,32 @@ export class StationService {
       this.socketService.updateReportGenerationProgress(userId, '60%');
 
       // **************Non-Clinical Checklist Marking*************
-      let totalNonClinicalMarks = 0;
-      userPromptPrefix =
-        'Analyze the given conversation and provide marks for given question: \n';
+      userPromptPrefix = `Hi Mr. Observer. Please give your remark in brief, if I ask you to evaluate the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
       const markedNonClinicalChecklist: Array<NonClinicalChecklistMarkingItem> =
         [];
       for await (const nonClinicalChecklistItem of NonClinicalChecklist) {
         const evaluatorUserPrompt =
           userPromptPrefix +
-          getUserPromptForNonClinicalChecklist(
-            nonClinicalChecklistItem,
-            userFirstName,
-          );
-        const options = [1, 2, 3, 4, 5];
-        const res = await axios.post(evaluateServerURL, {
-          systemPrompt: evaluatorSystemPrompt,
-          userPrompt: evaluatorUserPrompt,
-          options,
-        });
+          `Give remarks/feedback for the judging criteria - "${nonClinicalChecklistItem.label}"`;
+        const evalRemark = await this.openAiUtil.getChatCompletion([
+          {
+            role: 'system',
+            content: evaluatorSystemPrompt,
+          },
+          {
+            role: 'user',
+            content: evaluatorUserPrompt,
+          },
+        ]);
         markedNonClinicalChecklist.push({
           label: nonClinicalChecklistItem.label,
-          score: parseInt(res.data.data),
+          remark: evalRemark,
         });
-        totalNonClinicalMarks += 5;
-        securedMarks += parseInt(res.data.data);
       }
       this.socketService.updateReportGenerationProgress(userId, '80%');
       // ************************************************************
 
-      const totalSecurableMarks = totalClinicalMarks + totalNonClinicalMarks;
+      const totalSecurableMarks = totalClinicalMarks;
       const securedMarksOutOf12 = (securedMarks / totalSecurableMarks) * 12;
 
       await this.evaluationRepository.create({

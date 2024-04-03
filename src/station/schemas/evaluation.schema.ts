@@ -5,7 +5,7 @@ import { AbstractDocument } from 'src/database/abstract.schema';
 
 export interface NonClinicalChecklistMarkingItem {
   label: string;
-  score: number;
+  remark: string;
 }
 
 export interface ClinicalChecklistMarkingItem {
