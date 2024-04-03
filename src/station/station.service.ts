@@ -27,7 +27,11 @@ import {
 import { User } from 'src/user/schemas/user.schema';
 import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
-import { ExamSessionStatus } from 'src/chat/schemas/session.schema';
+import {
+  ExamSession,
+  ExamSessionStatus,
+  FindingStatus,
+} from 'src/chat/schemas/session.schema';
 import { EvaluationRepository } from './repositories/evaluation.repository';
 import {
   ClinicalChecklistMarkingItem,
@@ -458,8 +462,7 @@ export class StationService {
     });
 
     this.prepareEvaluationResultsInBackgrond(
-      session.sessionId,
-      session.stationId,
+      session,
       user.userId,
       user.name,
       station.stationName,
@@ -467,27 +470,43 @@ export class StationService {
   }
 
   async prepareEvaluationResultsInBackgrond(
-    sessionId: string,
-    stationId: string,
+    session: ExamSession,
     userId: string,
     userName: string,
     stationName: string,
   ): Promise<void> {
-    this.socketService.updateReportGenerationProgress(userId, '10%');
+    let totalEvaluationProgressPercentage = 10;
+    this.socketService.updateReportGenerationProgress(
+      userId,
+      totalEvaluationProgressPercentage + '%',
+    );
 
-    this.socketService.updateReportGenerationProgress(userId, '12%');
+    totalEvaluationProgressPercentage += 2;
+    this.socketService.updateReportGenerationProgress(
+      userId,
+      totalEvaluationProgressPercentage + '%',
+    );
+
+    totalEvaluationProgressPercentage += 2;
     const patient = await this.patientRepository.findOne({
-      associatedStation: stationId,
+      associatedStation: session.stationId,
     });
 
-    this.socketService.updateReportGenerationProgress(userId, '14%');
+    this.socketService.updateReportGenerationProgress(
+      userId,
+      totalEvaluationProgressPercentage + '%',
+    );
     const evaluator = await this.evaluatorRepository.findOne({
-      associatedStation: stationId,
+      associatedStation: session.stationId,
     });
 
-    this.socketService.updateReportGenerationProgress(userId, '16%');
+    totalEvaluationProgressPercentage += 2;
+    this.socketService.updateReportGenerationProgress(
+      userId,
+      totalEvaluationProgressPercentage + '%',
+    );
     const chats = await this.chatsRepository.find({
-      sessionId: sessionId,
+      sessionId: session.sessionId,
     });
 
     chats.sort((a, b) => {
@@ -496,7 +515,11 @@ export class StationService {
       );
     });
 
-    this.socketService.updateReportGenerationProgress(userId, '30%');
+    totalEvaluationProgressPercentage += 10;
+    this.socketService.updateReportGenerationProgress(
+      userId,
+      totalEvaluationProgressPercentage + '%',
+    );
 
     const evaluateServerURL =
       this.configService.get<string>('EVALUATION_API_URL');
@@ -523,6 +546,13 @@ export class StationService {
           userPrompt: evaluatorUserPrompt,
           options,
         });
+
+        totalEvaluationProgressPercentage += 0.75;
+        this.socketService.updateReportGenerationProgress(
+          userId,
+          totalEvaluationProgressPercentage + '%',
+        );
+
         markedClinicalChecklist.push({
           question: clinicalChecklistItem.question,
           score: res.data.data === 'Yes' ? clinicalChecklistItem.marks : 0,
@@ -551,24 +581,45 @@ export class StationService {
             content: evaluatorUserPrompt,
           },
         ]);
+
+        totalEvaluationProgressPercentage += 2;
+        this.socketService.updateReportGenerationProgress(
+          userId,
+          totalEvaluationProgressPercentage + '%',
+        );
+
         markedNonClinicalChecklist.push({
           label: nonClinicalChecklistItem.label,
           remark: evalRemark,
         });
       }
-      this.socketService.updateReportGenerationProgress(userId, '80%');
-      // ************************************************************
+      // ********************Findings MArking**********************
 
-      const totalSecurableMarks = totalClinicalMarks;
+      let totalFindingsMarks = 0;
+      for (const finding of session.findingsRecord) {
+        totalFindingsMarks += finding.marks;
+        if (finding.status === FindingStatus.COMPLETED) {
+          securedMarks += finding.marks;
+        }
+      }
+      // **************Evaluation Report Generation***************
+
+      totalEvaluationProgressPercentage += 5;
+      this.socketService.updateReportGenerationProgress(
+        userId,
+        totalEvaluationProgressPercentage + '%',
+      );
+      const totalSecurableMarks = totalClinicalMarks + totalFindingsMarks;
       const securedMarksOutOf12 = (securedMarks / totalSecurableMarks) * 12;
 
       await this.evaluationRepository.create({
-        associatedSession: sessionId,
+        associatedSession: session.sessionId,
         stationName: stationName,
         clinicalChecklist: markedClinicalChecklist,
         nonClinicalChecklist: markedNonClinicalChecklist,
         marksObtained: securedMarksOutOf12,
       } as Evaluation);
+
       this.socketService.updateReportGenerationProgress(
         userId,
         '100%',
@@ -576,6 +627,10 @@ export class StationService {
       );
     } catch (error) {
       this.socketService.updateReportGenerationProgress(userId, '100%', 0);
+      this.socketService.throwError(
+        userId,
+        'Evaluation report generation failed',
+      );
       console.log(
         'There is some error caused while producing the evaluation',
         error,

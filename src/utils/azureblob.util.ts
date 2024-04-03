@@ -45,7 +45,7 @@ export class AzureBlobUtil {
 
         const optimisedImg = await sharp(file.buffer)
           .resize(targetWidth, targetHeight)
-          .png({ quality: 60 })
+          .png({ quality: 50 })
           .toBuffer();
 
         await blockBlobClient.uploadData(optimisedImg);

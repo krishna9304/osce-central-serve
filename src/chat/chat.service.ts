@@ -10,6 +10,7 @@ import {
   ExamSession,
   ExamSessionStatus,
   FindingStatus,
+  FindingsRecord,
 } from './schemas/session.schema';
 import { StationsRepository } from 'src/station/repositories/station.repository';
 import { PatientRepository } from 'src/station/repositories/patient.repository';
@@ -59,7 +60,7 @@ export class ChatService {
       associatedStation: stationId,
     });
 
-    const patientFindings = [];
+    const patientFindings: FindingsRecord[] = [];
     for await (const finding of patient.findings) {
       if (finding.image) {
         finding.image = await this.azureBlobUtil.getTemporaryPublicUrl(
@@ -70,7 +71,7 @@ export class ChatService {
         id: randomUUID(),
         finding: finding.name,
         value: finding.value,
-        img: finding.image,
+        image: finding.image,
         marks: finding.marks,
         subcategory: finding.subcategory,
         status: FindingStatus.PENDING,

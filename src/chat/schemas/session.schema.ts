@@ -19,7 +19,8 @@ export interface FindingsRecord {
   value: string;
   status: FindingStatus;
   marks: number;
-  img?: string;
+  subcategory: string;
+  image?: string;
 }
 
 @Schema({ versionKey: false })
