@@ -199,4 +199,38 @@ export const NonClinicalChecklist = [
       },
     ],
   },
+  {
+    label: 'Suggested areas of improvement for the doctor',
+    scores: [
+      {
+        label: 'Very Poor (⭐️)',
+        value: 1,
+        remark: 'Shows no empathy, patient feels unheard and unvalued.',
+      },
+      {
+        label: 'Poor (⭐️⭐️)',
+        value: 2,
+        remark:
+          'Shows limited empathy, patient feels only somewhat acknowledged.',
+      },
+      {
+        label: 'Average (⭐️⭐️⭐️)',
+        value: 3,
+        remark:
+          'Shows a reasonable level of empathy, patient feels acknowledged but not fully supported.',
+      },
+      {
+        label: 'Good (⭐️⭐️⭐️⭐️)',
+        value: 4,
+        remark:
+          'Shows high level of empathy, patient feels understood and supported.',
+      },
+      {
+        label: 'Excellent (⭐️⭐️⭐️⭐️⭐️)',
+        value: 5,
+        remark:
+          'Exceptional level of empathy, patient feels deeply understood, supported, and cared for.',
+      },
+    ],
+  },
 ];
