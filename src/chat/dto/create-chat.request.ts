@@ -9,9 +9,9 @@ export class CreateChatRequest {
   @IsString()
   content: string;
 
-  created_at: string;
+  created_at: number;
 
-  updated_at: string;
+  updated_at: number;
 
   metadata: any;
 }

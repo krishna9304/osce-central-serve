@@ -1,11 +1,24 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { Types } from 'mongoose';
 
 export class CreateStationRequest {
+  _id: Types.ObjectId;
+
   stationId: string;
+
+  stripeProductId: string;
 
   @IsNotEmpty()
   @IsString()
   stationName: string;
+
+  @IsNotEmpty()
+  @IsString()
+  stationDescription: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  pricePerUnit: number;
 
   @IsNotEmpty()
   @IsString()
@@ -17,9 +30,11 @@ export class CreateStationRequest {
 
   status: string;
 
-  created_at: string;
+  freeTierEligible: boolean;
 
-  updated_at: string;
+  created_at: number;
+
+  updated_at: number;
 
   metadata: any;
 }

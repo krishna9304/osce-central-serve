@@ -22,11 +22,11 @@ export class StationCategory extends AbstractDocument {
   @Prop({ required: true })
   associatedStream: string;
 
-  @Prop({ default: new Date().toISOString() })
-  created_at: string;
+  @Prop({ default: null })
+  created_at: number;
 
-  @Prop({ default: new Date().toISOString() })
-  updated_at: string;
+  @Prop({ default: null })
+  updated_at: number;
 
   @Prop({ default: null, type: Object })
   metadata: any;
@@ -39,5 +39,7 @@ StationCategorySchema.pre('save', function (next) {
   this.categoryId = `${StationCategory.name}-${randomUUID()
     .replace('-', '')
     .slice(0, 10)}`;
+  this.created_at = Date.now();
+  this.updated_at = Date.now();
   next();
 });

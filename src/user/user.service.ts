@@ -8,26 +8,46 @@ import { UsersRepository } from './repositories/user.repository';
 import { User } from './schemas/user.schema';
 import { CreateUserRequest } from './dto/create-user.dto';
 import { AzureBlobUtil } from 'src/utils/azureblob.util';
+import { StripeService } from 'src/stripe/stripe.service';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
+    private readonly stripeService: StripeService,
   ) {}
 
   async createUser(
-    request: any,
+    request: Partial<User>,
     initilaUserData: Partial<User> = null,
-  ): Promise<User> {
+  ): Promise<{
+    user: User;
+    addPaymentMethodSessionUrl: string | null;
+  }> {
     await this.validateCreateUserRequest(request);
     let user: User;
+    let sessionUrl: string | null = null;
     if (initilaUserData) {
+      const resp = await this.stripeService.createCustomer({
+        email: request.email,
+        name: request.name,
+        phone: initilaUserData.phone,
+        userId: initilaUserData.userId,
+      });
+
+      sessionUrl = resp.session.url;
+
       user = await this.usersRepository.findOneAndUpdate(
         { phone: initilaUserData.phone },
-        { ...request, status: 'active', updated_at: new Date().toISOString() },
+        {
+          ...request,
+          status: 'active',
+          stripeCustomerId: resp.customer.id,
+          updated_at: Date.now(),
+        },
       );
-    } else user = await this.usersRepository.create(request);
+    } else user = await this.usersRepository.create(request as User);
 
     if (user.profile_picture) {
       user.profile_picture = await this.azureBlobUtil.getTemporaryPublicUrl(
@@ -36,7 +56,7 @@ export class UserService {
     }
     delete user.metadata;
 
-    return user;
+    return { user, addPaymentMethodSessionUrl: sessionUrl };
   }
 
   async validate(phone: string, otp: string): Promise<User> {
@@ -54,7 +74,7 @@ export class UserService {
       { phone },
       {
         phone_verified: true,
-        updated_at: new Date().toISOString(),
+        updated_at: Date.now(),
         metadata: { ...user.metadata, otp: null },
       },
     );
@@ -78,7 +98,7 @@ export class UserService {
     await this.usersRepository.findOneAndUpdate(
       { phone },
       {
-        updated_at: new Date().toISOString(),
+        updated_at: Date.now(),
         metadata: { ...prevMetadata, ...metadata },
       },
     );
@@ -124,11 +144,12 @@ export class UserService {
     } else if (request.profile_picture) {
       await this.azureBlobUtil.getTemporaryPublicUrl(request.profile_picture);
     }
+
     const updatedUser = await this.usersRepository.findOneAndUpdate(
       { _id: user._id },
       {
         ...request,
-        updated_at: new Date().toISOString(),
+        updated_at: Date.now(),
       },
     );
 
@@ -168,7 +189,13 @@ export class UserService {
     return errors;
   }
 
-  async createUserByAdmin(file, request: CreateUserRequest): Promise<User> {
+  async createUserByAdmin(
+    file,
+    request: CreateUserRequest,
+  ): Promise<{
+    user: User;
+    addPaymentMethodSessionUrl: string | null;
+  }> {
     await this.validateCreateUserRequest(request);
     if (file)
       request.profile_picture = await this.azureBlobUtil.uploadImage(file);
@@ -176,8 +203,23 @@ export class UserService {
       await this.azureBlobUtil.getTemporaryPublicUrl(request.profile_picture);
     }
     const userCreated = await this.usersRepository.create(request);
-    delete userCreated.metadata;
-    return userCreated;
+    const resp = await this.stripeService.createCustomer({
+      email: request.email,
+      name: request.name,
+      phone: request.phone,
+      userId: userCreated.userId,
+    });
+
+    const updatedUser = await this.usersRepository.findOneAndUpdate(
+      { userId: userCreated.userId },
+      {
+        stripeCustomerId: resp.customer.id,
+        updated_at: Date.now(),
+      },
+    );
+
+    delete updatedUser.metadata;
+    return { user: updatedUser, addPaymentMethodSessionUrl: resp.session.url };
   }
 
   async getUsers(userIds: string | null): Promise<User[]> {

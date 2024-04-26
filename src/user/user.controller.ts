@@ -50,10 +50,10 @@ export class UserController {
   @UseInterceptors(FileInterceptor('profilePicture'))
   async createUserByAdmin(
     @Body() request: CreateUserRequest,
-    @CurrentUser() user: User,
+    @CurrentUser() currentUser: User,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ApiResponseType> {
-    if (user.role !== 'admin') {
+    if (currentUser.role !== 'admin') {
       throw new UnauthorizedException('You are not allowed to create user');
     }
     if (!request.phone || !isPhoneNumber(request.phone)) {
@@ -61,13 +61,12 @@ export class UserController {
         'Please provide a valid phone number',
       );
     }
-    const userCreated = await this.userService.createUserByAdmin(file, request);
-    const res = new ApiResponse(
-      'User created successfully',
-      null,
-      200,
-      userCreated,
-    );
+    const { user, addPaymentMethodSessionUrl } =
+      await this.userService.createUserByAdmin(file, request);
+    const res = new ApiResponse('User created successfully', null, 200, {
+      ...user,
+      addPaymentMethodSessionUrl,
+    });
     return res.getResponse();
   }
 
@@ -90,13 +89,12 @@ export class UserController {
         delete request[field];
       });
     }
-    const user = await this.userService.createUser(request, initialUserData);
-    const res = new ApiResponse(
-      'User registered successfully',
-      errorMsg,
-      200,
-      user,
-    );
+    const { user, addPaymentMethodSessionUrl } =
+      await this.userService.createUser(request, initialUserData);
+    const res = new ApiResponse('User registered successfully', errorMsg, 200, {
+      ...user,
+      addPaymentMethodSessionUrl,
+    });
     return res.getResponse();
   }
 

@@ -31,7 +31,7 @@ import { EvaluationRepository } from './repositories/evaluation.repository';
 import { SocketModule } from 'src/socket/socket.module';
 import { SocketService } from 'src/socket/socket.service';
 import { SocketGateway } from 'src/socket/socket.gateway';
-import { Socket } from 'socket.io';
+import { StripeModule } from 'src/stripe/stripe.module';
 
 @Module({
   imports: [
@@ -55,6 +55,7 @@ import { Socket } from 'socket.io';
     forwardRef(() => AuthModule),
     UtilModule,
     forwardRef(() => SocketModule),
+    StripeModule,
   ],
   controllers: [StationController],
   providers: [

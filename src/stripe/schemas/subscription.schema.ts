@@ -3,39 +3,39 @@ import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { AbstractDocument } from 'src/database/abstract.schema';
 
+export interface ChangePlanHistoryType {
+  oldPlanId: string;
+  newPlanId: string;
+  changeDate: string;
+}
+
 @Schema({ versionKey: false })
-export class Station extends AbstractDocument {
+export class Subscription extends AbstractDocument {
   _id: Types.ObjectId;
 
-  @Prop({
-    default: null,
-    unique: true,
-  })
-  stationId: string;
-
-  @Prop({ required: true })
-  stripeProductId: string;
+  @Prop({ default: null, unique: true })
+  subscriptionId: string;
 
   @Prop({ required: true, unique: true })
-  stationName: string;
+  stripeSubscriptionId: string;
 
   @Prop({ required: true })
-  stationDescription: string;
+  userId: string;
 
   @Prop({ required: true })
-  pricePerUnit: number;
+  planId: string;
 
   @Prop({ required: true })
-  stationCategory: string;
+  subscriptionStart: number;
 
   @Prop({ required: true })
-  candidateInstructions: string;
+  subscriptionEnd: number;
 
-  @Prop({ default: 'inactive' })
-  status: string;
+  @Prop({ default: 0 })
+  additionalStationsBought: number;
 
-  @Prop({ default: false })
-  freeTierEligible: boolean;
+  @Prop({ default: [] })
+  changePlanHistory: ChangePlanHistoryType[];
 
   @Prop({ default: null })
   created_at: number;
@@ -47,10 +47,10 @@ export class Station extends AbstractDocument {
   metadata: any;
 }
 
-export const StationSchema = SchemaFactory.createForClass(Station);
+export const SubscriptionSchema = SchemaFactory.createForClass(Subscription);
 
-StationSchema.pre('save', function (next) {
-  this.stationId = `${Station.name}-${randomUUID()
+SubscriptionSchema.pre('save', function (next) {
+  this.subscriptionId = `${Subscription.name}-${randomUUID()
     .replace('-', '')
     .slice(0, 10)}`;
   this.created_at = Date.now();

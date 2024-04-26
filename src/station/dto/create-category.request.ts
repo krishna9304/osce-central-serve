@@ -15,9 +15,9 @@ export class CreateCategoryRequest {
   @IsString()
   associatedStream: string;
 
-  created_at: string;
+  created_at: number;
 
-  updated_at: string;
+  updated_at: number;
 
   metadata: any;
 }

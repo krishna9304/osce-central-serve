@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -17,6 +18,9 @@ import { PatientRepository } from 'src/station/repositories/patient.repository';
 import { randomUUID } from 'crypto';
 import { AzureBlobUtil } from 'src/utils/azureblob.util';
 import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
+import { SubscriptionsRepository } from 'src/stripe/repositories/subscription.repository';
+import { PlansRepository } from 'src/stripe/repositories/plan.repository';
+import { PlanType } from 'src/stripe/schemas/plan.schema';
 
 @Injectable()
 export class ChatService {
@@ -26,7 +30,47 @@ export class ChatService {
     private readonly evaluationRepository: EvaluationRepository,
     private readonly patientsRepository: PatientRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
+    private readonly subscriptionsRepository: SubscriptionsRepository,
+    private readonly plansRepository: PlansRepository,
   ) {}
+
+  async checkUsableCreditsAndEligibility(
+    user: User,
+    stationId: string,
+  ): Promise<Array<any>> {
+    const subscription = await this.subscriptionsRepository.findOne({
+      userId: user.userId,
+    });
+
+    const plan = await this.plansRepository.findOne({
+      planId: subscription.planId,
+    });
+
+    const examSessions = await this.examSessionsRepository.find({
+      associatedUser: user.userId,
+      startTime: {
+        $gte: subscription.subscriptionStart,
+        $lte: subscription.subscriptionEnd,
+      },
+    });
+
+    if (
+      examSessions.length >=
+      plan.numberOfStations + subscription.additionalStationsBought
+    ) {
+      return [false, 'No more sessions left. Please upgrade your plan.'];
+    }
+
+    const station = await this.stationsRepository.findOne({
+      stationId,
+    });
+
+    if (plan.planType === PlanType.FREE && !station.freeTierEligible) {
+      return [false, 'Station not available in free tier. Please upgrade your plan'];
+    }
+
+    return [true, ''];
+  }
 
   async startExamSession(stationId: string, user: User): Promise<ExamSession> {
     const sessionExists = await this.examSessionsRepository.exists({
@@ -47,6 +91,12 @@ export class ChatService {
     if (!stationExists) {
       throw new NotFoundException('Station does not exist.');
     }
+
+    const isEligible = await this.checkUsableCreditsAndEligibility(
+      user,
+      stationId,
+    );
+    if (!isEligible[0]) throw new ForbiddenException(isEligible[1]);
 
     const patientExists = await this.patientsRepository.exists({
       associatedStation: stationId,

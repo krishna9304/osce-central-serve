@@ -2,6 +2,7 @@ import { IsDateString, IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateUserRequest {
   userId: string;
+  stripeCustomerId: string;
 
   @IsNotEmpty()
   @IsEmail()
@@ -34,9 +35,9 @@ export class CreateUserRequest {
 
   phone_verified: boolean;
 
-  created_at: string;
+  created_at: number;
 
-  updated_at: string;
+  updated_at: number;
 
   metadata: any;
 }

@@ -19,6 +19,7 @@ import {
   EvaluationSchema,
 } from 'src/station/schemas/evaluation.schema';
 import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
+import { StripeModule } from 'src/stripe/stripe.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { EvaluationRepository } from 'src/station/repositories/evaluation.reposi
       { name: Evaluation.name, schema: EvaluationSchema },
     ]),
     forwardRef(() => AuthModule),
+    StripeModule,
   ],
   controllers: [ChatController],
   providers: [

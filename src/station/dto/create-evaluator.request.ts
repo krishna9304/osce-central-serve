@@ -12,9 +12,9 @@ export class CreateEvaluatorRequest {
   @IsArray({ message: 'clinicalChecklist must be an array of ChecklistItems' })
   clinicalChecklist: Array<ChecklistItem>;
 
-  created_at: string;
+  created_at: number;
 
-  updated_at: string;
+  updated_at: number;
 
   metadata: any;
 }

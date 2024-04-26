@@ -20,10 +20,7 @@ import { StationCategory } from './schemas/category.schema';
 import { Station } from './schemas/station.schema';
 import { Patient } from './schemas/patient.schema';
 import { Evaluator } from './schemas/evaluator.schema';
-import {
-  getEvaluatorSystemPrompt,
-  getUserPromptForNonClinicalChecklist,
-} from 'src/chat/constants/prompt';
+import { getEvaluatorSystemPrompt } from 'src/chat/constants/prompt';
 import { User } from 'src/user/schemas/user.schema';
 import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
@@ -43,6 +40,7 @@ import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { NonClinicalChecklist } from './assets/checklist';
 import { OpenAiUtil } from 'src/utils/openai.util';
+import { StripeService } from 'src/stripe/stripe.service';
 
 @Injectable()
 export class StationService {
@@ -59,6 +57,7 @@ export class StationService {
     private readonly evaluationRepository: EvaluationRepository,
     private readonly socketService: SocketService,
     private readonly configService: ConfigService,
+    private readonly stripeService: StripeService,
   ) {}
 
   async createStream(streamRequestData: CreateStreamRequest) {
@@ -105,8 +104,12 @@ export class StationService {
         'Provided category ID is invalid and does not match our records.',
       );
     try {
+      const stripeProduct = await this.stripeService.createStationProduct(
+        stationRequestData as Station,
+      );
       await this.stationRepository.create({
         ...stationRequestData,
+        stripeProductId: stripeProduct.id,
       } as Station);
     } catch (error) {
       console.log(error);
@@ -689,7 +692,7 @@ export class StationService {
       const updatedStation = await this.stationRepository.findOneAndUpdate(
         { stationId },
         {
-          $set: { ...stationRequestData, updated_at: new Date().toISOString() },
+          $set: { ...stationRequestData, updated_at: Date.now() },
         },
       );
       return updatedStation;
@@ -709,7 +712,7 @@ export class StationService {
       const updatedStream = await this.streamRepository.findOneAndUpdate(
         { streamId },
         {
-          $set: { ...streamRequestData, updated_at: new Date().toISOString() },
+          $set: { ...streamRequestData, updated_at: Date.now() },
         },
       );
       return updatedStream;
@@ -732,7 +735,7 @@ export class StationService {
           {
             $set: {
               ...categoryRequestData,
-              updated_at: new Date().toISOString(),
+              updated_at: Date.now(),
             },
           },
         );
@@ -778,7 +781,7 @@ export class StationService {
       const updatedPatient = await this.patientRepository.findOneAndUpdate(
         { patientId },
         {
-          $set: { ...patientRequestData, updated_at: new Date().toISOString() },
+          $set: { ...patientRequestData, updated_at: Date.now() },
         },
       );
       return updatedPatient;
@@ -819,7 +822,7 @@ export class StationService {
         {
           $set: {
             ...evaluatorRequestData,
-            updated_at: new Date().toISOString(),
+            updated_at: Date.now(),
           },
         },
       );
