@@ -21,32 +21,27 @@ export class UserService {
   async createUser(
     request: Partial<User>,
     initilaUserData: Partial<User> = null,
-  ): Promise<{
-    user: User;
-    addPaymentMethodSessionUrl: string | null;
-  }> {
+  ): Promise<User> {
     await this.validateCreateUserRequest(request);
     let user: User;
-    let sessionUrl: string | null = null;
     if (initilaUserData) {
-      const resp = await this.stripeService.createCustomer({
+      const customer = await this.stripeService.createCustomer({
         email: request.email,
         name: request.name,
         phone: initilaUserData.phone,
         userId: initilaUserData.userId,
       });
 
-      sessionUrl = resp.session.url;
-
       user = await this.usersRepository.findOneAndUpdate(
         { phone: initilaUserData.phone },
         {
           ...request,
           status: 'active',
-          stripeCustomerId: resp.customer.id,
+          stripeCustomerId: customer.id,
           updated_at: Date.now(),
         },
       );
+      await this.stripeService.createUsageDocAndStartFreeTrial(user);
     } else user = await this.usersRepository.create(request as User);
 
     if (user.profile_picture) {
@@ -56,7 +51,7 @@ export class UserService {
     }
     delete user.metadata;
 
-    return { user, addPaymentMethodSessionUrl: sessionUrl };
+    return user;
   }
 
   async validate(phone: string, otp: string): Promise<User> {
@@ -170,6 +165,7 @@ export class UserService {
       'phone',
       'phone_verified',
       'email_verified',
+      'stripeCustomerId',
       'metadata',
       'status',
       'created_at',
@@ -189,13 +185,7 @@ export class UserService {
     return errors;
   }
 
-  async createUserByAdmin(
-    file,
-    request: CreateUserRequest,
-  ): Promise<{
-    user: User;
-    addPaymentMethodSessionUrl: string | null;
-  }> {
+  async createUserByAdmin(file, request: CreateUserRequest): Promise<User> {
     await this.validateCreateUserRequest(request);
     if (file)
       request.profile_picture = await this.azureBlobUtil.uploadImage(file);
@@ -203,7 +193,7 @@ export class UserService {
       await this.azureBlobUtil.getTemporaryPublicUrl(request.profile_picture);
     }
     const userCreated = await this.usersRepository.create(request);
-    const resp = await this.stripeService.createCustomer({
+    const customer = await this.stripeService.createCustomer({
       email: request.email,
       name: request.name,
       phone: request.phone,
@@ -213,13 +203,15 @@ export class UserService {
     const updatedUser = await this.usersRepository.findOneAndUpdate(
       { userId: userCreated.userId },
       {
-        stripeCustomerId: resp.customer.id,
+        stripeCustomerId: customer.id,
         updated_at: Date.now(),
       },
     );
 
+    await this.stripeService.createUsageDocAndStartFreeTrial(updatedUser);
+
     delete updatedUser.metadata;
-    return { user: updatedUser, addPaymentMethodSessionUrl: resp.session.url };
+    return updatedUser;
   }
 
   async getUsers(userIds: string | null): Promise<User[]> {

@@ -15,6 +15,13 @@ import { Plan, PlanType } from './schemas/plan.schema';
 import { Subscription } from './schemas/subscription.schema';
 import { SubscriptionsRepository } from './repositories/subscription.repository';
 import { UsersRepository } from 'src/user/repositories/user.repository';
+import { UsagesRepository } from './repositories/usage.repository';
+import {
+  FREE_TRIAL_PAYMENT_ID,
+  RechargeType,
+  Usage,
+  ValidityStatus,
+} from './schemas/usage.schema';
 
 @Injectable()
 export class StripeService {
@@ -25,6 +32,7 @@ export class StripeService {
     private readonly plansRepository: PlansRepository,
     private readonly subscriptionsRepository: SubscriptionsRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly usagesRepository: UsagesRepository,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY'),
@@ -34,10 +42,7 @@ export class StripeService {
     );
   }
 
-  async createCustomer(user: Partial<User>): Promise<{
-    customer: Stripe.Customer;
-    session: Stripe.Checkout.Session;
-  }> {
+  async createCustomer(user: Partial<User>): Promise<Stripe.Customer> {
     try {
       const customer = await this.stripe.customers.create({
         email: user.email,
@@ -48,17 +53,7 @@ export class StripeService {
         },
       });
 
-      const session = await this.stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        customer: customer.id,
-        mode: 'setup',
-        success_url:
-          'http://localhost:8080/api/v1/stripe/default-payment-method/{CHECKOUT_SESSION_ID}',
-        cancel_url: 'https://www.osceai.uk/cancel',
-        currency: 'inr',
-      });
-
-      return { customer, session };
+      return customer;
     } catch (error) {
       throw new HttpException(
         `StripeError: ${error.message}`,
@@ -447,6 +442,90 @@ export class StripeService {
         `StripeError: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+
+  async createUsageDocAndStartFreeTrial(user: Partial<User>) {
+    try {
+      const freeTrialDays = parseInt(
+        this.configService.get<string>('FREE_TRIAL_DAYS'),
+      );
+      const recharge: RechargeType = {
+        paymentId: FREE_TRIAL_PAYMENT_ID,
+        rechargeAmount: 0,
+        sessionsBought: 2,
+        sessionsUsed: 0,
+        startDate: Date.now(),
+        endDate: new Date(
+          new Date().setDate(new Date().getDate() + freeTrialDays),
+        ).getTime(),
+        validityStatus: ValidityStatus.ACTIVE,
+      };
+      const usage = await this.usagesRepository.create({
+        userId: user.userId,
+        rechargeHistory: [recharge],
+      } as Usage);
+      return usage;
+    } catch (error) {
+      throw new HttpException(
+        `StripeError: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async checkUsableCreditsAndEligibility(user: Partial<User>): Promise<{
+    message: string;
+    eligibleRecharge: RechargeType;
+  }> {
+    try {
+      const usage = await this.usagesRepository.findOne({
+        userId: user.userId,
+      });
+      const recharges = usage.rechargeHistory;
+      const activeRecharges = recharges.filter(
+        (recharge) => recharge.validityStatus === ValidityStatus.ACTIVE,
+      );
+
+      if (!activeRecharges.length)
+        return {
+          message: 'No active recharge found.',
+          eligibleRecharge: null,
+        };
+
+      const usableRecharges = activeRecharges.filter(
+        (recharge) => recharge.sessionsUsed < recharge.sessionsBought,
+      );
+
+      if (!usableRecharges.length)
+        return {
+          message: 'You have exhausted all your sessions. Please recharge.',
+          eligibleRecharge: null,
+        };
+      usableRecharges.sort((a, b) => a.startDate - b.startDate);
+      return {
+        message: 'You are eligible to start a new session.',
+        eligibleRecharge: usableRecharges[0],
+      };
+    } catch (error) {
+      console.log('Error while checking usable credits: ', error);
+      return {
+        message: 'Error while checking usable credits.',
+        eligibleRecharge: null,
+      };
+    }
+  }
+
+  async deductSessionFromRecharge(
+    user: Partial<User>,
+    recharge: RechargeType,
+  ): Promise<boolean> {
+    try {
+      await this.usagesRepository.increaseSessionCount(user, recharge);
+      return true;
+    } catch (error) {
+      console.log('Error while deducting sessions: ', error);
+      return false;
     }
   }
 }

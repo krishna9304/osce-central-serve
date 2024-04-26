@@ -61,12 +61,8 @@ export class UserController {
         'Please provide a valid phone number',
       );
     }
-    const { user, addPaymentMethodSessionUrl } =
-      await this.userService.createUserByAdmin(file, request);
-    const res = new ApiResponse('User created successfully', null, 200, {
-      ...user,
-      addPaymentMethodSessionUrl,
-    });
+    const user = await this.userService.createUserByAdmin(file, request);
+    const res = new ApiResponse('User created successfully', null, 200, user);
     return res.getResponse();
   }
 
@@ -89,12 +85,13 @@ export class UserController {
         delete request[field];
       });
     }
-    const { user, addPaymentMethodSessionUrl } =
-      await this.userService.createUser(request, initialUserData);
-    const res = new ApiResponse('User registered successfully', errorMsg, 200, {
-      ...user,
-      addPaymentMethodSessionUrl,
-    });
+    const user = await this.userService.createUser(request, initialUserData);
+    const res = new ApiResponse(
+      'User registered successfully',
+      errorMsg,
+      200,
+      user,
+    );
     return res.getResponse();
   }
 

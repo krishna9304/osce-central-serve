@@ -1,27 +1,13 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Put,
-  Req,
-  Res,
-  UnauthorizedException,
-  UseGuards,
-} from '@nestjs/common';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { PlanDto } from './dto/plan.dto';
-import { CurrentUser } from 'src/user/current-user.decorator';
-import { User } from 'src/user/schemas/user.schema';
+import { Controller, Post, Req } from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { ApiResponse } from 'src/constants/apiResponse';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 
 @Controller('stripe')
 export class StripeController {
   constructor(private readonly stripeService: StripeService) {}
 
+  /*
   @Post('plan')
   @UseGuards(JwtAuthGuard)
   async createPlan(@Body() planDto: PlanDto, @CurrentUser() user: User) {
@@ -70,33 +56,13 @@ export class StripeController {
     await this.stripeService.createFreeSubscription(user);
     response.redirect('https://www.osceai.uk/');
   }
+  */
 
   @Post('webhook/payment-status')
   async paymentStatusWebhook(@Req() request: Request) {
     let res = new ApiResponse('Payment failed.', null, 400, null);
     switch (request.body.type) {
       case 'checkout.session.completed':
-        if (request.body.data.object.payment_status === 'paid') {
-          await this.stripeService.updatePaymentSuccess(
-            request.body.data.object,
-          );
-          res = new ApiResponse('Payment was successful.', null, 200, null);
-        }
-        break;
-      case 'invoice.paid':
-        if (request.body.data.object.subscription) {
-          await this.stripeService.updatePlanAndStartNewBillingCycle(
-            request.body.data.object,
-          );
-          res = new ApiResponse(
-            'Invoice was paid successfully.',
-            null,
-            200,
-            null,
-          );
-        }
-        break;
-      case 'invoice.payment_failed':
         break;
       default:
         break;

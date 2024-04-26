@@ -18,9 +18,7 @@ import { PatientRepository } from 'src/station/repositories/patient.repository';
 import { randomUUID } from 'crypto';
 import { AzureBlobUtil } from 'src/utils/azureblob.util';
 import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
-import { SubscriptionsRepository } from 'src/stripe/repositories/subscription.repository';
-import { PlansRepository } from 'src/stripe/repositories/plan.repository';
-import { PlanType } from 'src/stripe/schemas/plan.schema';
+import { StripeService } from 'src/stripe/stripe.service';
 
 @Injectable()
 export class ChatService {
@@ -30,47 +28,8 @@ export class ChatService {
     private readonly evaluationRepository: EvaluationRepository,
     private readonly patientsRepository: PatientRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
-    private readonly subscriptionsRepository: SubscriptionsRepository,
-    private readonly plansRepository: PlansRepository,
+    private readonly stripeService: StripeService,
   ) {}
-
-  async checkUsableCreditsAndEligibility(
-    user: User,
-    stationId: string,
-  ): Promise<Array<any>> {
-    const subscription = await this.subscriptionsRepository.findOne({
-      userId: user.userId,
-    });
-
-    const plan = await this.plansRepository.findOne({
-      planId: subscription.planId,
-    });
-
-    const examSessions = await this.examSessionsRepository.find({
-      associatedUser: user.userId,
-      startTime: {
-        $gte: subscription.subscriptionStart,
-        $lte: subscription.subscriptionEnd,
-      },
-    });
-
-    if (
-      examSessions.length >=
-      plan.numberOfStations + subscription.additionalStationsBought
-    ) {
-      return [false, 'No more sessions left. Please upgrade your plan.'];
-    }
-
-    const station = await this.stationsRepository.findOne({
-      stationId,
-    });
-
-    if (plan.planType === PlanType.FREE && !station.freeTierEligible) {
-      return [false, 'Station not available in free tier. Please upgrade your plan'];
-    }
-
-    return [true, ''];
-  }
 
   async startExamSession(stationId: string, user: User): Promise<ExamSession> {
     const sessionExists = await this.examSessionsRepository.exists({
@@ -92,11 +51,10 @@ export class ChatService {
       throw new NotFoundException('Station does not exist.');
     }
 
-    const isEligible = await this.checkUsableCreditsAndEligibility(
-      user,
-      stationId,
-    );
-    if (!isEligible[0]) throw new ForbiddenException(isEligible[1]);
+    const eligibility =
+      await this.stripeService.checkUsableCreditsAndEligibility(user);
+    if (!eligibility.eligibleRecharge)
+      throw new ForbiddenException(eligibility.message);
 
     const patientExists = await this.patientsRepository.exists({
       associatedStation: stationId,
@@ -136,6 +94,18 @@ export class ChatService {
 
     const createdExamSession =
       await this.examSessionsRepository.create(examSessionData);
+    const sessionDeducted = await this.stripeService.deductSessionFromRecharge(
+      user,
+      eligibility.eligibleRecharge,
+    );
+    if (!sessionDeducted) {
+      this.examSessionsRepository.deleteOne({
+        sessionId: createdExamSession.sessionId,
+      });
+      throw new InternalServerErrorException(
+        "Something went wrong. Coundn't start session.",
+      );
+    }
 
     return {
       ...createdExamSession,
@@ -158,11 +128,10 @@ export class ChatService {
       status: ExamSessionStatus.ACTIVE,
     });
 
-    if (!sessionExists) {
+    if (!sessionExists)
       throw new BadRequestException(
         'Session does not exist or has already been completed.',
       );
-    }
 
     try {
       await this.examSessionsRepository.findOneAndUpdate(
