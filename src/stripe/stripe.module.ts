@@ -28,7 +28,6 @@ import { UsagesRepository } from './repositories/usage.repository';
       isGlobal: true,
       validationSchema: Joi.object({
         STRIPE_SECRET_KEY: Joi.string().required(),
-        FREE_TRIAL_DAYS: Joi.number().required(),
       }),
       envFilePath: '.env',
     }),

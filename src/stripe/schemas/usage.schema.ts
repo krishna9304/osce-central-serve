@@ -6,12 +6,35 @@ import { AbstractDocument } from 'src/database/abstract.schema';
 export enum ValidityStatus {
   ACTIVE = 'active',
   EXPIRED = 'expired',
+  PAYMENT_PENDING = 'payment-pending',
+}
+
+export enum SessionType {
+  RECHARGE = 'recharge',
 }
 
 export const FREE_TRIAL_PAYMENT_ID = 'free-trial';
+export const FREE_TRIAL_SESSIONS = 2;
+export const FREE_TRIAL_DAYS = 7;
+export const BASE_SESSION_PRICE = 500; // in rupees
+export const MINIMUM_DISCOUNT_ELIGIBLE_SESSIONS = 10;
+export const MINIMUM_SESSIONS_TO_BUY = 5;
+export const MAX_DISCOUNT = 0.2; // 20%
+export const RECHARGE_VALIDITY_DAYS = 30;
+
+export interface RechargeMetadata {
+  UserId: string;
+  Name: string;
+  Email: string;
+  Phone: string;
+  SessionsBought: number;
+  SessionType: SessionType;
+}
 
 export interface RechargeType {
-  paymentId: string;
+  paymentIntentId: string | null;
+  sessionId: string;
+  invoiceId: string | null;
   startDate: number;
   endDate: number;
   rechargeAmount: number;

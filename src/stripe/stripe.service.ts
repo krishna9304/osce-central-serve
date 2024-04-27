@@ -17,8 +17,16 @@ import { SubscriptionsRepository } from './repositories/subscription.repository'
 import { UsersRepository } from 'src/user/repositories/user.repository';
 import { UsagesRepository } from './repositories/usage.repository';
 import {
+  BASE_SESSION_PRICE,
+  FREE_TRIAL_DAYS,
   FREE_TRIAL_PAYMENT_ID,
+  FREE_TRIAL_SESSIONS,
+  MAX_DISCOUNT,
+  MINIMUM_DISCOUNT_ELIGIBLE_SESSIONS,
+  RECHARGE_VALIDITY_DAYS,
+  RechargeMetadata,
   RechargeType,
+  SessionType,
   Usage,
   ValidityStatus,
 } from './schemas/usage.schema';
@@ -447,17 +455,16 @@ export class StripeService {
 
   async createUsageDocAndStartFreeTrial(user: Partial<User>) {
     try {
-      const freeTrialDays = parseInt(
-        this.configService.get<string>('FREE_TRIAL_DAYS'),
-      );
       const recharge: RechargeType = {
-        paymentId: FREE_TRIAL_PAYMENT_ID,
+        paymentIntentId: FREE_TRIAL_PAYMENT_ID,
+        sessionId: FREE_TRIAL_PAYMENT_ID,
+        invoiceId: null,
         rechargeAmount: 0,
-        sessionsBought: 2,
+        sessionsBought: FREE_TRIAL_SESSIONS,
         sessionsUsed: 0,
         startDate: Date.now(),
         endDate: new Date(
-          new Date().setDate(new Date().getDate() + freeTrialDays),
+          new Date().setDate(new Date().getDate() + FREE_TRIAL_DAYS),
         ).getTime(),
         validityStatus: ValidityStatus.ACTIVE,
       };
@@ -526,6 +533,130 @@ export class StripeService {
     } catch (error) {
       console.log('Error while deducting sessions: ', error);
       return false;
+    }
+  }
+
+  calculateDiscountedTotalPrice(quantity: number): number {
+    let discountRate;
+    if (quantity < MINIMUM_DISCOUNT_ELIGIBLE_SESSIONS) {
+      discountRate = 0;
+    } else {
+      discountRate = Math.log(quantity) / 7 / 3;
+      discountRate = Math.min(discountRate, MAX_DISCOUNT);
+    }
+
+    const pricePerItem = BASE_SESSION_PRICE * (1 - discountRate);
+    const totalPrice = pricePerItem * quantity;
+
+    return parseFloat(totalPrice.toFixed(2));
+  }
+
+  async getRechargeCheckoutUrl(
+    user: User,
+    quantity: number,
+  ): Promise<Stripe.Checkout.Session> {
+    try {
+      const totalPrice = parseInt(
+        (this.calculateDiscountedTotalPrice(quantity) * 100).toFixed(),
+      );
+      const stripePrice = await this.stripe.prices.create({
+        currency: 'inr',
+        unit_amount: totalPrice,
+        product_data: {
+          name: 'osce.ai session recharge',
+          active: true,
+        },
+      });
+      const metadata: RechargeMetadata | any = {
+        UserId: user.userId,
+        Name: user.name,
+        Email: user.email,
+        Phone: user.phone,
+        SessionsBought: quantity,
+        SessionType: SessionType.RECHARGE,
+      };
+      const paymentSession = await this.stripe.checkout.sessions.create({
+        customer: user.stripeCustomerId,
+        payment_method_types: ['card'],
+        mode: 'payment',
+        success_url: 'https://www.osceai.uk/',
+        cancel_url: 'https://www.osceai.uk/cancel',
+        line_items: [
+          {
+            price: stripePrice.id,
+            quantity: 1,
+          },
+        ],
+        invoice_creation: {
+          enabled: true,
+          invoice_data: {
+            metadata,
+          },
+        },
+        metadata,
+      });
+      await this.usagesRepository.findOneAndUpdate(
+        {
+          userId: user.userId,
+        },
+        {
+          $push: {
+            rechargeHistory: {
+              paymentIntentId: null,
+              sessionId: paymentSession.id,
+              invoiceId: null,
+              rechargeAmount: this.calculateDiscountedTotalPrice(quantity),
+              sessionsBought: quantity,
+              sessionsUsed: 0,
+              startDate: Date.now(),
+              endDate: Date.now(),
+              validityStatus: ValidityStatus.PAYMENT_PENDING,
+            },
+          },
+          updated_at: Date.now(),
+        },
+      );
+      return paymentSession;
+    } catch (error) {
+      throw new HttpException(
+        `StripeError: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async updateRechargeSuccess(object: Stripe.Checkout.Session): Promise<void> {
+    try {
+      const user = await this.usersRepository.findOne({
+        stripeCustomerId: object.customer as string,
+      });
+      const usage = await this.usagesRepository.findOne({
+        userId: user.userId,
+      });
+      const recharge = usage.rechargeHistory.find(
+        (recharge) => recharge.sessionId === object.id,
+      );
+      if (!recharge)
+        throw new HttpException(
+          'Recharge not found in usage history.',
+          HttpStatus.NOT_FOUND,
+        );
+      if (recharge.validityStatus === ValidityStatus.ACTIVE)
+        throw new HttpException(
+          'Recharge already activated.',
+          HttpStatus.BAD_REQUEST,
+        );
+
+      await this.usagesRepository.updatePaymentSuccessAndAddValidity(
+        user,
+        recharge,
+        object,
+      );
+    } catch (error) {
+      throw new HttpException(
+        `InternalServerError: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

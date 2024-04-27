@@ -1,7 +1,19 @@
-import { Controller, Post, Req } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { ApiResponse } from 'src/constants/apiResponse';
 import { Request } from 'express';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from 'src/user/current-user.decorator';
+import { User } from 'src/user/schemas/user.schema';
+import { isNumberString } from 'class-validator';
+import { MINIMUM_SESSIONS_TO_BUY, SessionType } from './schemas/usage.schema';
 
 @Controller('stripe')
 export class StripeController {
@@ -58,11 +70,55 @@ export class StripeController {
   }
   */
 
+  @Get('recharge-checkout-url')
+  @UseGuards(JwtAuthGuard)
+  async buySessionsCheckoutUrl(
+    @Req() request: Request,
+    @CurrentUser() user: User,
+  ) {
+    if (!isNumberString(request.query['quantity'])) {
+      throw new BadRequestException('Quantity must be a number.');
+    }
+    const quantity = parseInt(request.query['quantity'].toString());
+    if (quantity < MINIMUM_SESSIONS_TO_BUY) {
+      throw new BadRequestException(
+        `You must buy at least ${MINIMUM_SESSIONS_TO_BUY} sessions.`,
+      );
+    }
+    const stripeSession = await this.stripeService.getRechargeCheckoutUrl(
+      user,
+      quantity,
+    );
+    const res = new ApiResponse(
+      'Please continue with the payment. Your session credits will be updated once the payment is successful.',
+      null,
+      200,
+      { paymentUrl: stripeSession.url },
+    );
+    return res.getResponse();
+  }
+
   @Post('webhook/payment-status')
   async paymentStatusWebhook(@Req() request: Request) {
     let res = new ApiResponse('Payment failed.', null, 400, null);
     switch (request.body.type) {
       case 'checkout.session.completed':
+        switch (request.body.data.object.metadata.SessionType) {
+          case SessionType.RECHARGE:
+            await this.stripeService.updateRechargeSuccess(
+              request.body.data.object,
+            );
+            res = new ApiResponse(
+              'Payment successful. Your session credits have been updated.',
+              null,
+              200,
+              null,
+            );
+            break;
+          default:
+            console.log('Invalid session type.', request.body.data.object);
+            break;
+        }
         break;
       default:
         break;
