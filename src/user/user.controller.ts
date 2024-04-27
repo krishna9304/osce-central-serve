@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
   Post,
   Put,
   Query,
@@ -136,6 +138,23 @@ export class UserController {
       200,
       updatedUser,
     );
+    return res.getResponse();
+  }
+
+  @Delete(':userId')
+  @UseGuards(JwtAuthGuard)
+  async deleteUser(
+    @CurrentUser() user: User,
+    @Param('userId') userId: string,
+  ): Promise<ApiResponseType> {
+    if (!userId) {
+      throw new UnprocessableEntityException("Please provide user's Id.");
+    }
+    if (user.userId !== userId && user.role !== 'admin') {
+      throw new UnauthorizedException('You are not allowed to delete user');
+    }
+    await this.userService.deleteUser(userId);
+    const res = new ApiResponse('User deleted successfully', null, 200, null);
     return res.getResponse();
   }
 }

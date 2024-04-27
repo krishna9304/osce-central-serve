@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -9,6 +10,10 @@ import { User } from './schemas/user.schema';
 import { CreateUserRequest } from './dto/create-user.dto';
 import { AzureBlobUtil } from 'src/utils/azureblob.util';
 import { StripeService } from 'src/stripe/stripe.service';
+import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
+import { ChatsRepository } from 'src/chat/repositories/chat.repository';
+import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
+import { UsagesRepository } from 'src/stripe/repositories/usage.repository';
 
 @Injectable()
 export class UserService {
@@ -16,6 +21,10 @@ export class UserService {
     private readonly usersRepository: UsersRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
     private readonly stripeService: StripeService,
+    private readonly examSessionsRepository: ExamSessionsRepository,
+    private readonly chatsRepository: ChatsRepository,
+    private readonly evaluationRepository: EvaluationRepository,
+    private readonly usagesRepository: UsagesRepository,
   ) {}
 
   async createUser(
@@ -239,5 +248,31 @@ export class UserService {
     }
 
     return users;
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    try {
+      const userExists = await this.usersRepository.exists({ userId });
+      if (!userExists) {
+        throw new Error('User not found');
+      }
+      const sessions = await this.examSessionsRepository.find({
+        associatedUsers: userId,
+      });
+      const sessionIds = sessions.map((session) => session.sessionId);
+      await this.chatsRepository.delete({
+        sessionId: { $in: sessionIds },
+      });
+      await this.examSessionsRepository.delete({
+        sessionId: { $in: sessionIds },
+      });
+      await this.evaluationRepository.delete({
+        associatedSession: { $in: sessionIds },
+      });
+      await this.usagesRepository.deleteOne({ userId });
+      await this.usersRepository.deleteOne({ userId });
+    } catch (err) {
+      throw new NotFoundException(`NotFoundException: ${err.message}`);
+    }
   }
 }
