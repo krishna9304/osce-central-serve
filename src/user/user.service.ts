@@ -257,7 +257,7 @@ export class UserService {
         throw new Error('User not found');
       }
       const sessions = await this.examSessionsRepository.find({
-        associatedUsers: userId,
+        associatedUser: userId,
       });
       const sessionIds = sessions.map((session) => session.sessionId);
       await this.chatsRepository.delete({
@@ -270,6 +270,10 @@ export class UserService {
         associatedSession: { $in: sessionIds },
       });
       await this.usagesRepository.deleteOne({ userId });
+
+      const user = await this.usersRepository.findOne({ userId });
+      await this.stripeService.deleteCustomer(user.stripeCustomerId);
+
       await this.usersRepository.deleteOne({ userId });
     } catch (err) {
       throw new NotFoundException(`NotFoundException: ${err.message}`);

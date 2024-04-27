@@ -23,7 +23,6 @@ import {
   FREE_TRIAL_SESSIONS,
   MAX_DISCOUNT,
   MINIMUM_DISCOUNT_ELIGIBLE_SESSIONS,
-  RECHARGE_VALIDITY_DAYS,
   RechargeMetadata,
   RechargeType,
   SessionType,
@@ -62,6 +61,18 @@ export class StripeService {
       });
 
       return customer;
+    } catch (error) {
+      throw new HttpException(
+        `StripeError: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deleteCustomer(customerId: string): Promise<boolean> {
+    try {
+      await this.stripe.customers.del(customerId);
+      return true;
     } catch (error) {
       throw new HttpException(
         `StripeError: ${error.message}`,
