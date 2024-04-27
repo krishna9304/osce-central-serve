@@ -94,8 +94,28 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
     });
   }
 
-  async find(filterQuery: FilterQuery<TDocument>) {
-    return this.model.find(filterQuery, {}, { lean: true });
+  async find(
+    filterQuery: FilterQuery<TDocument>,
+    options: {
+      page?: number;
+      limit?: number;
+      sort?: any;
+    } = {
+      page: 1,
+      limit: 10,
+      sort: { created_at: -1 },
+    },
+  ) {
+    return this.model.find(
+      filterQuery,
+      {},
+      {
+        lean: true,
+        skip: (options.page - 1) * options.limit,
+        limit: options.limit,
+        sort: options.sort,
+      },
+    );
   }
 
   async deleteOne(filterQuery: FilterQuery<TDocument>) {

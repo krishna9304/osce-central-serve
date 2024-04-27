@@ -214,12 +214,19 @@ export class UserService {
     return updatedUser;
   }
 
-  async getUsers(userIds: string | null): Promise<User[]> {
+  async getUsers(
+    userIds: string | null,
+    page: number,
+    limit: number,
+  ): Promise<User[]> {
     let users = [];
-    if (!userIds) users = await this.usersRepository.find({});
+    if (!userIds) users = await this.usersRepository.find({}, { page, limit });
     else {
       const userIdsList = userIds.split(',');
-      users = await this.usersRepository.find({ userId: { $in: userIdsList } });
+      users = await this.usersRepository.find(
+        { userId: { $in: userIdsList } },
+        { page, limit },
+      );
     }
 
     for (let user of users) {

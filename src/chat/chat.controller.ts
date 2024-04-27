@@ -75,8 +75,15 @@ export class ChatController {
 
   @Get('session-list')
   @UseGuards(JwtAuthGuard)
-  async getSessionList(@CurrentUser() user: User) {
-    const sessionList = await this.chatService.getSessionList(user);
+  async getSessionList(@CurrentUser() user: User, @Query() query: any) {
+    if (!query.page || query.page < 1) query.page = 1;
+    if (!query.limit || query.limit < 1) query.limit = 10;
+
+    const sessionList = await this.chatService.getSessionList(
+      user,
+      parseInt(query.page),
+      parseInt(query.limit),
+    );
 
     const res = new ApiResponse('Session list.', null, 200, sessionList);
     return res.getResponse();

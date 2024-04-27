@@ -243,11 +243,24 @@ export class ChatService {
     }
   }
 
-  async getSessionList(user: User): Promise<ExamSession[]> {
+  async getSessionList(
+    user: User,
+    page: number,
+    limit: number,
+  ): Promise<ExamSession[]> {
     try {
-      const sessions = await this.examSessionsRepository.find({
-        associatedUser: user.userId,
-      });
+      const sessions = await this.examSessionsRepository.find(
+        {
+          associatedUser: user.userId,
+        },
+        {
+          limit,
+          page,
+          sort: {
+            created_at: -1,
+          },
+        },
+      );
 
       const sessionsWithPatientDetails = [];
       for await (const session of sessions) {

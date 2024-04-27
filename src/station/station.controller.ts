@@ -134,8 +134,16 @@ export class StationController {
 
   @Get('stream')
   @UseGuards(JwtAuthGuard)
-  async getStreams(@Query('streamIds') streamIds: string | null) {
-    const streams = await this.stationService.getStreams(streamIds);
+  async getStreams(@Query() query: any) {
+    const streamIds = query.streamIds || null;
+    if (!query.page || query.page < 1) query.page = 1;
+    if (!query.limit || query.limit < 1) query.limit = 10;
+
+    const streams = await this.stationService.getStreams(
+      streamIds,
+      parseInt(query.page),
+      parseInt(query.limit),
+    );
 
     const res = new ApiResponse(
       'Streams fetched successfully',
@@ -148,8 +156,16 @@ export class StationController {
 
   @Get('category')
   @UseGuards(JwtAuthGuard)
-  async getCategories(@Query('categoryIds') categoryIds: string | null) {
-    const categories = await this.stationService.getCategories(categoryIds);
+  async getCategories(@Query() query: any) {
+    const categoryIds = query.categoryIds || null;
+    if (!query.page || query.page < 1) query.page = 1;
+    if (!query.limit || query.limit < 1) query.limit = 10;
+
+    const categories = await this.stationService.getCategories(
+      categoryIds,
+      parseInt(query.page),
+      parseInt(query.limit),
+    );
 
     const res = new ApiResponse(
       'Categories fetched successfully',
@@ -162,8 +178,16 @@ export class StationController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async getStations(@Query('stationIds') stationIds: string | null) {
-    const stations = await this.stationService.getStations(stationIds);
+  async getStations(@Query() query: any) {
+    const stationIds = query.stationIds || null;
+    if (!query.page || query.page < 1) query.page = 1;
+    if (!query.limit || query.limit < 1) query.limit = 10;
+
+    const stations = await this.stationService.getStations(
+      stationIds,
+      parseInt(query.page),
+      parseInt(query.limit),
+    );
 
     const res = new ApiResponse(
       'Stations fetched successfully',
@@ -176,8 +200,16 @@ export class StationController {
 
   @Get('patient')
   @UseGuards(JwtAuthGuard)
-  async getPatients(@Query('patientIds') patietIds: string | null) {
-    const patients = await this.stationService.getPatients(patietIds);
+  async getPatients(@Query() query: any) {
+    const patientIds = query.patientIds || null;
+    if (!query.page || query.page < 1) query.page = 1;
+    if (!query.limit || query.limit < 1) query.limit = 10;
+
+    const patients = await this.stationService.getPatients(
+      patientIds,
+      parseInt(query.page),
+      parseInt(query.limit),
+    );
 
     const res = new ApiResponse(
       'Patients fetched successfully',
@@ -190,8 +222,16 @@ export class StationController {
 
   @Get('evaluator')
   @UseGuards(JwtAuthGuard)
-  async getEvaluators(@Query('evaluatorIds') evaluatorIds: string | null) {
-    const evaluators = await this.stationService.getEvaluators(evaluatorIds);
+  async getEvaluators(@Query() query: any) {
+    const evaluatorIds = query.evaluatorIds || null;
+    if (!query.page || query.page < 1) query.page = 1;
+    if (!query.limit || query.limit < 1) query.limit = 10;
+
+    const evaluators = await this.stationService.getEvaluators(
+      evaluatorIds,
+      parseInt(query.page),
+      parseInt(query.limit),
+    );
     const res = new ApiResponse(
       'Evaluators fetched successfully',
       null,
@@ -203,8 +243,18 @@ export class StationController {
 
   @Get('list-categories/:streamId')
   @UseGuards(JwtAuthGuard)
-  async listCategories(@Param('streamId') streamId: string) {
-    const categories = await this.stationService.listCategories(streamId);
+  async listCategories(
+    @Param('streamId') streamId: string,
+    @Query() query: any,
+  ) {
+    if (!query.page || query.page < 1) query.page = 1;
+    if (!query.limit || query.limit < 1) query.limit = 10;
+
+    const categories = await this.stationService.listCategories(
+      streamId,
+      parseInt(query.page),
+      parseInt(query.limit),
+    );
     const res = new ApiResponse(
       'Categories fetched successfully',
       null,
@@ -219,8 +269,17 @@ export class StationController {
   async listStations(
     @Param('categoryId') categoryId: string,
     @CurrentUser() user: User,
+    @Query() query: any,
   ) {
-    const stations = await this.stationService.listStations(categoryId, user);
+    if (!query.page || query.page < 1) query.page = 1;
+    if (!query.limit || query.limit < 1) query.limit = 10;
+
+    const stations = await this.stationService.listStations(
+      categoryId,
+      user,
+      parseInt(query.page),
+      parseInt(query.limit),
+    );
     const res = new ApiResponse(
       'Stations fetched successfully',
       null,

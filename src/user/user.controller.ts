@@ -28,14 +28,22 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   async getUsers(
     @CurrentUser() user: User,
-    @Query('userIds') userIds: string | null,
+    @Query() query: any,
   ): Promise<ApiResponseType> {
+    const userIds = query.userIds || null;
+    if (!query.page || query.page < 1) query.page = 1;
+    if (!query.limit || query.limit < 1) query.limit = 10;
+
     if (user.role !== 'admin') {
       throw new UnauthorizedException(
         'You are not allowed to view other user details.',
       );
     }
-    const users = await this.userService.getUsers(userIds);
+    const users = await this.userService.getUsers(
+      userIds,
+      parseInt(query.page),
+      parseInt(query.limit),
+    );
     const res = new ApiResponse(
       'User details fetched successfully.',
       null,

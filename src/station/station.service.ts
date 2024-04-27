@@ -190,15 +190,23 @@ export class StationService {
     }
   }
 
-  async getStreams(streamIds: string | null): Promise<Stream[]> {
+  async getStreams(
+    streamIds: string | null,
+    page: number,
+    limit: number,
+  ): Promise<Stream[]> {
     try {
       let streams: Stream[] = [];
-      if (!streamIds) streams = await this.streamRepository.find({});
+      if (!streamIds)
+        streams = await this.streamRepository.find({}, { page, limit });
       else {
         const listOfstreamIds = streamIds.split(',');
-        streams = await this.streamRepository.find({
-          streamId: { $in: listOfstreamIds },
-        });
+        streams = await this.streamRepository.find(
+          {
+            streamId: { $in: listOfstreamIds },
+          },
+          { page, limit },
+        );
       }
       return streams;
     } catch (error) {
@@ -209,16 +217,26 @@ export class StationService {
     }
   }
 
-  async getCategories(categoryIds: string | null): Promise<StationCategory[]> {
+  async getCategories(
+    categoryIds: string | null,
+    page: number,
+    limit: number,
+  ): Promise<StationCategory[]> {
     try {
       let categories: StationCategory[] = [];
       if (!categoryIds)
-        categories = await this.stationCategoryRepository.find({});
+        categories = await this.stationCategoryRepository.find(
+          {},
+          { page, limit },
+        );
       else {
         const listOfCategoryIds = categoryIds.split(',');
-        categories = await this.stationCategoryRepository.find({
-          categoryId: { $in: listOfCategoryIds },
-        });
+        categories = await this.stationCategoryRepository.find(
+          {
+            categoryId: { $in: listOfCategoryIds },
+          },
+          { page, limit },
+        );
       }
       return categories;
     } catch (error) {
@@ -229,15 +247,23 @@ export class StationService {
     }
   }
 
-  async getStations(stationIds: string | null): Promise<Station[]> {
+  async getStations(
+    stationIds: string | null,
+    page: number,
+    limit: number,
+  ): Promise<Station[]> {
     try {
       let stations: Station[] = [];
-      if (!stationIds) stations = await this.stationRepository.find({});
+      if (!stationIds)
+        stations = await this.stationRepository.find({}, { page, limit });
       else {
         const listOfStationIds = stationIds.split(',');
-        stations = await this.stationRepository.find({
-          stationId: { $in: listOfStationIds },
-        });
+        stations = await this.stationRepository.find(
+          {
+            stationId: { $in: listOfStationIds },
+          },
+          { page, limit },
+        );
       }
       return stations;
     } catch (error) {
@@ -248,15 +274,23 @@ export class StationService {
     }
   }
 
-  async getPatients(patientIds: string | null): Promise<Patient[]> {
+  async getPatients(
+    patientIds: string | null,
+    page: number,
+    limit: number,
+  ): Promise<Patient[]> {
     try {
       let patientDocs: Patient[] = [];
-      if (!patientIds) patientDocs = await this.patientRepository.find({});
+      if (!patientIds)
+        patientDocs = await this.patientRepository.find({}, { page, limit });
       else {
         const listOfPatientIds = patientIds.split(',');
-        patientDocs = await this.patientRepository.find({
-          patientId: { $in: listOfPatientIds },
-        });
+        patientDocs = await this.patientRepository.find(
+          {
+            patientId: { $in: listOfPatientIds },
+          },
+          { page, limit },
+        );
       }
 
       for await (const patient of patientDocs) {
@@ -277,15 +311,23 @@ export class StationService {
     }
   }
 
-  async getEvaluators(evaluatorIds: string | null): Promise<Evaluator[]> {
+  async getEvaluators(
+    evaluatorIds: string | null,
+    page: number,
+    limit: number,
+  ): Promise<Evaluator[]> {
     try {
       let evaluators: Evaluator[] = [];
-      if (!evaluatorIds) evaluators = await this.evaluatorRepository.find({});
+      if (!evaluatorIds)
+        evaluators = await this.evaluatorRepository.find({}, { page, limit });
       else {
         const listOfEvaluatorIds = evaluatorIds.split(',');
-        evaluators = await this.evaluatorRepository.find({
-          evaluatorId: { $in: listOfEvaluatorIds },
-        });
+        evaluators = await this.evaluatorRepository.find(
+          {
+            evaluatorId: { $in: listOfEvaluatorIds },
+          },
+          { page, limit },
+        );
       }
       return evaluators;
     } catch (error) {
@@ -296,7 +338,11 @@ export class StationService {
     }
   }
 
-  async listCategories(streamId: string): Promise<StationCategory[]> {
+  async listCategories(
+    streamId: string,
+    page: number,
+    limit: number,
+  ): Promise<StationCategory[]> {
     const streamExists = await this.streamRepository.exists({
       streamId,
     });
@@ -306,9 +352,15 @@ export class StationService {
         'Provided stream ID is invalid and does not match our records.',
       );
     try {
-      const categories = await this.stationCategoryRepository.find({
-        associatedStream: streamId,
-      });
+      const categories = await this.stationCategoryRepository.find(
+        {
+          associatedStream: streamId,
+        },
+        {
+          page,
+          limit,
+        },
+      );
 
       return categories;
     } catch (error) {
@@ -319,7 +371,12 @@ export class StationService {
     }
   }
 
-  async listStations(categoryId: string, user: User): Promise<Station[]> {
+  async listStations(
+    categoryId: string,
+    user: User,
+    page: number,
+    limit: number,
+  ): Promise<Station[]> {
     const categoryExists = await this.stationCategoryRepository.exists({
       categoryId,
     });
@@ -331,14 +388,26 @@ export class StationService {
     try {
       let stations = [];
       if (user.role === 'admin') {
-        stations = await this.stationRepository.find({
-          stationCategory: categoryId,
-        });
+        stations = await this.stationRepository.find(
+          {
+            stationCategory: categoryId,
+          },
+          {
+            page,
+            limit,
+          },
+        );
       } else {
-        stations = await this.stationRepository.find({
-          stationCategory: categoryId,
-          status: 'active',
-        });
+        stations = await this.stationRepository.find(
+          {
+            stationCategory: categoryId,
+            status: 'active',
+          },
+          {
+            page,
+            limit,
+          },
+        );
       }
       const stationIds = stations.map((station) => station.stationId);
       const patients = await this.patientRepository.find({
