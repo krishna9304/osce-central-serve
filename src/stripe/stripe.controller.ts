@@ -103,6 +103,7 @@ export class StripeController {
     let res = new ApiResponse('Payment failed.', null, 400, null);
     switch (request.body.type) {
       case 'checkout.session.completed':
+        if (request.body.data.object.payment_status !== 'paid') break;
         switch (request.body.data.object.metadata.SessionType) {
           case SessionType.RECHARGE:
             await this.stripeService.updateRechargeSuccess(
