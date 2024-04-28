@@ -20,7 +20,10 @@ import { StationCategory } from './schemas/category.schema';
 import { Station } from './schemas/station.schema';
 import { Patient } from './schemas/patient.schema';
 import { Evaluator } from './schemas/evaluator.schema';
-import { getEvaluatorSystemPrompt } from 'src/chat/constants/prompt';
+import {
+  getEvaluatorSystemPromptForClinicalChecklist,
+  getEvaluatorSystemPromptForNonClinicalChecklist,
+} from 'src/chat/constants/prompt';
 import { User } from 'src/user/schemas/user.schema';
 import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
@@ -609,24 +612,26 @@ export class StationService {
       this.configService.get<string>('EVALUATION_API_URL');
 
     const userFirstName = userName.split(' ')[0];
-    const evaluatorSystemPrompt = getEvaluatorSystemPrompt(
-      userFirstName,
-      patient.patientName,
-      chats,
-    );
+
+    const evaluatorSystemPromptForClinicalChecklist =
+      getEvaluatorSystemPromptForClinicalChecklist(
+        userFirstName,
+        patient.patientName,
+        chats,
+      );
 
     try {
       // ****************Clinical Checklist Marking***************
       let totalClinicalMarks = 0;
       let securedMarks = 0;
-      let userPromptPrefix = `Hi Mr. Observer. Please tell me whether the following activity happened during the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
+      let userPromptPrefix = `Hi expert medical evaluator, Please tell me whether the following activity happened during the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
       const markedClinicalChecklist: Array<ClinicalChecklistMarkingItem> = [];
       for await (const clinicalChecklistItem of evaluator.clinicalChecklist) {
         const evaluatorUserPrompt =
           userPromptPrefix + clinicalChecklistItem.question;
         const options = ['Yes', 'No'];
         const res = await axios.post(evaluateServerURL, {
-          systemPrompt: evaluatorSystemPrompt,
+          systemPrompt: evaluatorSystemPromptForClinicalChecklist,
           userPrompt: evaluatorUserPrompt,
           options,
         });
@@ -648,7 +653,13 @@ export class StationService {
       this.socketService.updateReportGenerationProgress(userId, '60%');
 
       // **************Non-Clinical Checklist Marking*************
-      userPromptPrefix = `Hi Mr. Observer. Please give your remark in brief, if I ask you to evaluate the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
+      const evaluatorSystemPromptForNonClinicalChecklist =
+        getEvaluatorSystemPromptForNonClinicalChecklist(
+          userFirstName,
+          patient.patientName,
+          chats,
+        );
+      userPromptPrefix = `Hi expert medical evaluator. Please give your remark in brief, if I ask you to evaluate the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
       const markedNonClinicalChecklist: Array<NonClinicalChecklistMarkingItem> =
         [];
       for await (const nonClinicalChecklistItem of NonClinicalChecklist) {
@@ -658,7 +669,7 @@ export class StationService {
         const evalRemark = await this.openAiUtil.getChatCompletion([
           {
             role: 'system',
-            content: evaluatorSystemPrompt,
+            content: evaluatorSystemPromptForNonClinicalChecklist,
           },
           {
             role: 'user',
@@ -695,6 +706,13 @@ export class StationService {
       );
       const totalSecurableMarks = totalClinicalMarks + totalFindingsMarks;
       const securedMarksOutOf12 = (securedMarks / totalSecurableMarks) * 12;
+
+      console.log(
+        securedMarks,
+        totalClinicalMarks,
+        totalFindingsMarks,
+        totalSecurableMarks,
+      );
 
       await this.evaluationRepository.create({
         associatedSession: session.sessionId,

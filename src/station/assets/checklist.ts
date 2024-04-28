@@ -30,7 +30,7 @@ export const NonClinicalChecklist = [
     ],
   },
   {
-    label: 'Language Used by the Doctor',
+    label: 'Clinical reasoning and Applied knowledge',
     scores: [
       {
         label: 'Very Poor (⭐️)',
@@ -65,7 +65,7 @@ export const NonClinicalChecklist = [
     ],
   },
   {
-    label: 'Picking Up the Issues',
+    label: 'Language and Communication Skills demonstration',
     scores: [
       {
         label: 'Very Poor (⭐️)',
@@ -98,7 +98,7 @@ export const NonClinicalChecklist = [
     ],
   },
   {
-    label: 'Listening Skills of the Doctor',
+    label: 'Professionalism and Ethical Consideration demonstration',
     scores: [
       {
         label: 'Very Poor (⭐️)',
@@ -133,7 +133,7 @@ export const NonClinicalChecklist = [
     ],
   },
   {
-    label: 'Rapport with the Patient',
+    label: 'Overall feedback and Improvement Areas',
     scores: [
       {
         label: 'Very Poor (⭐️)',
@@ -162,74 +162,6 @@ export const NonClinicalChecklist = [
         value: 5,
         remark:
           'Exceptional rapport, patient feels completely comfortable, valued, and understood.',
-      },
-    ],
-  },
-  {
-    label: 'Empathy Shown by the Doctor',
-    scores: [
-      {
-        label: 'Very Poor (⭐️)',
-        value: 1,
-        remark: 'Shows no empathy, patient feels unheard and unvalued.',
-      },
-      {
-        label: 'Poor (⭐️⭐️)',
-        value: 2,
-        remark:
-          'Shows limited empathy, patient feels only somewhat acknowledged.',
-      },
-      {
-        label: 'Average (⭐️⭐️⭐️)',
-        value: 3,
-        remark:
-          'Shows a reasonable level of empathy, patient feels acknowledged but not fully supported.',
-      },
-      {
-        label: 'Good (⭐️⭐️⭐️⭐️)',
-        value: 4,
-        remark:
-          'Shows high level of empathy, patient feels understood and supported.',
-      },
-      {
-        label: 'Excellent (⭐️⭐️⭐️⭐️⭐️)',
-        value: 5,
-        remark:
-          'Exceptional level of empathy, patient feels deeply understood, supported, and cared for.',
-      },
-    ],
-  },
-  {
-    label: 'Suggested areas of improvement for the doctor',
-    scores: [
-      {
-        label: 'Very Poor (⭐️)',
-        value: 1,
-        remark: 'Shows no empathy, patient feels unheard and unvalued.',
-      },
-      {
-        label: 'Poor (⭐️⭐️)',
-        value: 2,
-        remark:
-          'Shows limited empathy, patient feels only somewhat acknowledged.',
-      },
-      {
-        label: 'Average (⭐️⭐️⭐️)',
-        value: 3,
-        remark:
-          'Shows a reasonable level of empathy, patient feels acknowledged but not fully supported.',
-      },
-      {
-        label: 'Good (⭐️⭐️⭐️⭐️)',
-        value: 4,
-        remark:
-          'Shows high level of empathy, patient feels understood and supported.',
-      },
-      {
-        label: 'Excellent (⭐️⭐️⭐️⭐️⭐️)',
-        value: 5,
-        remark:
-          'Exceptional level of empathy, patient feels deeply understood, supported, and cared for.',
       },
     ],
   },
