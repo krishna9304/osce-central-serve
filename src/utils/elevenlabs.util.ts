@@ -6,7 +6,7 @@ import axios, { AxiosResponse } from 'axios';
 export class ElevenLabsUtil {
   constructor(private readonly configService: ConfigService) {}
 
-  url = (voiceId) =>
+  streamUrl = (voiceId) =>
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`;
   headers = {
     accept: 'application/json',
@@ -28,11 +28,30 @@ export class ElevenLabsUtil {
   ): Promise<AxiosResponse> => {
     try {
       const response = await axios.post(
-        this.url(voiceId),
+        this.streamUrl(voiceId),
         JSON.stringify(this.msgObject(text)),
         {
           headers: this.headers,
           responseType: 'stream',
+        },
+      );
+      return response;
+    } catch (e) {
+      console.log(e);
+      throw e;
+    }
+  };
+
+  readonly getAudioHTTP = async (
+    text: string,
+    voiceId: string,
+  ): Promise<AxiosResponse> => {
+    try {
+      const response = await axios.post(
+        this.streamUrl(voiceId).replace('/stream', ''),
+        JSON.stringify(this.msgObject(text)),
+        {
+          headers: this.headers,
         },
       );
       return response;

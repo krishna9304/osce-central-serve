@@ -19,6 +19,9 @@ import { randomUUID } from 'crypto';
 import { AzureBlobUtil } from 'src/utils/azureblob.util';
 import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
 import { StripeService } from 'src/stripe/stripe.service';
+import { ChatsRepository } from './repositories/chat.repository';
+import { Chat } from './schemas/chat.schema';
+import { ElevenLabsUtil } from 'src/utils/elevenlabs.util';
 
 @Injectable()
 export class ChatService {
@@ -29,9 +32,25 @@ export class ChatService {
     private readonly patientsRepository: PatientRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
     private readonly stripeService: StripeService,
+    private readonly chatsRepository: ChatsRepository,
+    private readonly elevenLabsUtil: ElevenLabsUtil,
   ) {}
 
-  async startExamSession(stationId: string, user: User): Promise<ExamSession> {
+  async startExamSession(
+    stationId: string,
+    user: User,
+  ): Promise<
+    ExamSession & {
+      patientInitialMessage: { msg: string; audioBuffer: string };
+      metadata: {
+        patientName: string;
+        stationName: string;
+        patientAge: string;
+        patientSex: string;
+        avatar: string;
+      };
+    }
+  > {
     const sessionExists = await this.examSessionsRepository.exists({
       associatedUser: user.userId,
       status: ExamSessionStatus.ACTIVE,
@@ -106,8 +125,24 @@ export class ChatService {
       );
     }
 
+    await this.chatsRepository.create({
+      sessionId: createdExamSession.sessionId,
+      role: 'user',
+      content: `Hi there! I'm ${user.name}. I'll be your doctor today. Let's get started!`,
+    } as Chat);
+
+    const aiChat = await this.chatsRepository.create({
+      sessionId: createdExamSession.sessionId,
+      role: 'assistant',
+      content: `Hi Doctor, My name is ${patient.patientName}. I need your help!`,
+    } as Chat);
+
     return {
       ...createdExamSession,
+      patientInitialMessage: {
+        msg: aiChat.content,
+        audioBuffer: null,
+      },
       metadata: {
         patientName: patient.patientName,
         stationName: stationId,

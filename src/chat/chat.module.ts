@@ -20,6 +20,7 @@ import {
 } from 'src/station/schemas/evaluation.schema';
 import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
 import { StripeModule } from 'src/stripe/stripe.module';
+import { ElevenLabsUtil } from 'src/utils/elevenlabs.util';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { StripeModule } from 'src/stripe/stripe.module';
     StationsRepository,
     PatientRepository,
     AzureBlobUtil,
+    ElevenLabsUtil,
   ],
 })
 export class ChatModule {}
