@@ -83,6 +83,13 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
     return document;
   }
 
+  async updateMany(
+    filterQuery: FilterQuery<TDocument>,
+    update: UpdateQuery<TDocument>,
+  ) {
+    return this.model.updateMany(filterQuery, update, { lean: true });
+  }
+
   async upsert(
     filterQuery: FilterQuery<TDocument>,
     document: Partial<TDocument>,
