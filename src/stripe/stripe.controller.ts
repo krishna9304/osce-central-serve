@@ -2,18 +2,23 @@ import {
   BadRequestException,
   Controller,
   Get,
+  Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { ApiResponse } from 'src/constants/apiResponse';
-import { Request } from 'express';
+import { Request, query } from 'express';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/user/current-user.decorator';
 import { User } from 'src/user/schemas/user.schema';
 import { isNumberString } from 'class-validator';
-import { MINIMUM_SESSIONS_TO_BUY, SessionType } from './schemas/usage.schema';
+import {
+  MINIMUM_SESSIONS_TO_BUY,
+  SessionType,
+} from './schemas/recharge.schema';
 
 @Controller('stripe')
 export class StripeController {
@@ -95,6 +100,55 @@ export class StripeController {
       200,
       { paymentUrl: stripeSession.url },
     );
+    return res.getResponse();
+  }
+
+  @Get('recharge-history')
+  @UseGuards(JwtAuthGuard)
+  async rechargeHistory(@CurrentUser() user: User, @Query() query: any) {
+    let userId;
+    if (query.userId) {
+      if (user.role !== 'admin' && user.userId !== query.userId) {
+        throw new BadRequestException(
+          'You are not authorised to view this data.',
+        );
+      }
+      userId = query.userId;
+    } else userId = user.userId;
+
+    if (!query.page || query.page < 1) query.page = 1;
+    if (!query.limit || query.limit < 1) query.limit = 10;
+
+    const recharges = await this.stripeService.getRecharges(
+      userId,
+      parseInt(query.page),
+      parseInt(query.limit),
+    );
+    const res = new ApiResponse(
+      'Recharge history fetched.',
+      null,
+      200,
+      recharges,
+    );
+    return res.getResponse();
+  }
+
+  @Get('download-invoice/:invoiceId')
+  @UseGuards(JwtAuthGuard)
+  async downloadInvoice(
+    @CurrentUser() user: User,
+    @Param('invoiceId') invoiceId: string,
+  ) {
+    if (!invoiceId) {
+      throw new BadRequestException('Invoice ID is required.');
+    }
+    const invoice = await this.stripeService.getDownloadInvoicePdfUrl(
+      user,
+      invoiceId,
+    );
+    const res = new ApiResponse('Invoice fetched.', null, 200, {
+      invoiceUrl: invoice.url,
+    });
     return res.getResponse();
   }
 

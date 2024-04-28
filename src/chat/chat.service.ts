@@ -95,7 +95,6 @@ export class ChatService {
     const createdExamSession =
       await this.examSessionsRepository.create(examSessionData);
     const sessionDeducted = await this.stripeService.deductSessionFromRecharge(
-      user,
       eligibility.eligibleRecharge,
     );
     if (!sessionDeducted) {

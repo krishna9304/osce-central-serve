@@ -198,14 +198,17 @@ export class StationService {
     try {
       let streams: Stream[] = [];
       if (!streamIds)
-        streams = await this.streamRepository.find({}, { page, limit });
+        streams = await this.streamRepository.find(
+          {},
+          { page, limit, sort: { created_at: -1 } },
+        );
       else {
         const listOfstreamIds = streamIds.split(',');
         streams = await this.streamRepository.find(
           {
             streamId: { $in: listOfstreamIds },
           },
-          { page, limit },
+          { page, limit, sort: { created_at: -1 } },
         );
       }
       return streams;
@@ -227,7 +230,7 @@ export class StationService {
       if (!categoryIds)
         categories = await this.stationCategoryRepository.find(
           {},
-          { page, limit },
+          { page, limit, sort: { created_at: -1 } },
         );
       else {
         const listOfCategoryIds = categoryIds.split(',');
@@ -235,7 +238,7 @@ export class StationService {
           {
             categoryId: { $in: listOfCategoryIds },
           },
-          { page, limit },
+          { page, limit, sort: { created_at: -1 } },
         );
       }
       return categories;
@@ -255,14 +258,17 @@ export class StationService {
     try {
       let stations: Station[] = [];
       if (!stationIds)
-        stations = await this.stationRepository.find({}, { page, limit });
+        stations = await this.stationRepository.find(
+          {},
+          { page, limit, sort: { created_at: -1 } },
+        );
       else {
         const listOfStationIds = stationIds.split(',');
         stations = await this.stationRepository.find(
           {
             stationId: { $in: listOfStationIds },
           },
-          { page, limit },
+          { page, limit, sort: { created_at: -1 } },
         );
       }
       return stations;
@@ -282,14 +288,17 @@ export class StationService {
     try {
       let patientDocs: Patient[] = [];
       if (!patientIds)
-        patientDocs = await this.patientRepository.find({}, { page, limit });
+        patientDocs = await this.patientRepository.find(
+          {},
+          { page, limit, sort: { created_at: -1 } },
+        );
       else {
         const listOfPatientIds = patientIds.split(',');
         patientDocs = await this.patientRepository.find(
           {
             patientId: { $in: listOfPatientIds },
           },
-          { page, limit },
+          { page, limit, sort: { created_at: -1 } },
         );
       }
 
@@ -319,14 +328,17 @@ export class StationService {
     try {
       let evaluators: Evaluator[] = [];
       if (!evaluatorIds)
-        evaluators = await this.evaluatorRepository.find({}, { page, limit });
+        evaluators = await this.evaluatorRepository.find(
+          {},
+          { page, limit, sort: { created_at: -1 } },
+        );
       else {
         const listOfEvaluatorIds = evaluatorIds.split(',');
         evaluators = await this.evaluatorRepository.find(
           {
             evaluatorId: { $in: listOfEvaluatorIds },
           },
-          { page, limit },
+          { page, limit, sort: { created_at: -1 } },
         );
       }
       return evaluators;

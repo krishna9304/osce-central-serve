@@ -31,30 +31,42 @@ export interface RechargeMetadata {
   SessionType: SessionType;
 }
 
-export interface RechargeType {
-  paymentIntentId: string | null;
-  sessionId: string;
-  invoiceId: string | null;
-  startDate: number;
-  endDate: number;
-  rechargeAmount: number;
-  sessionsBought: number;
-  sessionsUsed: number;
-  validityStatus: ValidityStatus;
-}
-
 @Schema({ versionKey: false })
-export class Usage extends AbstractDocument {
+export class Recharge extends AbstractDocument {
   _id: Types.ObjectId;
 
   @Prop({ default: null, unique: true })
-  usageId: string;
+  rechargeId: string;
 
   @Prop({ required: true })
   userId: string;
 
+  @Prop({ default: null })
+  paymentIntentId: string;
+
   @Prop({ required: true })
-  rechargeHistory: RechargeType[];
+  sessionId: string;
+
+  @Prop({ default: null})
+  invoiceId: string;
+
+  @Prop({ required: true })
+  startDate: number;
+
+  @Prop({ required: true })
+  endDate: number;
+
+  @Prop({ required: true })
+  rechargeAmount: number;
+
+  @Prop({ required: true })
+  sessionsBought: number;
+
+  @Prop({ required: true })
+  sessionsUsed: number;
+
+  @Prop({ required: true })
+  validityStatus: ValidityStatus;
 
   @Prop({ default: null })
   created_at: number;
@@ -66,10 +78,12 @@ export class Usage extends AbstractDocument {
   metadata: any;
 }
 
-export const UsageSchema = SchemaFactory.createForClass(Usage);
+export const RechargeSchema = SchemaFactory.createForClass(Recharge);
 
-UsageSchema.pre('save', function (next) {
-  this.usageId = `${Usage.name}-${randomUUID().replace('-', '').slice(0, 10)}`;
+RechargeSchema.pre('save', function (next) {
+  this.rechargeId = `${Recharge.name}-${randomUUID()
+    .replace('-', '')
+    .slice(0, 10)}`;
   this.created_at = Date.now();
   this.updated_at = Date.now();
   next();

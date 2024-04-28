@@ -15,7 +15,7 @@ import { Plan, PlanType } from './schemas/plan.schema';
 import { Subscription } from './schemas/subscription.schema';
 import { SubscriptionsRepository } from './repositories/subscription.repository';
 import { UsersRepository } from 'src/user/repositories/user.repository';
-import { UsagesRepository } from './repositories/usage.repository';
+import { RechargesRepository } from './repositories/recharge.repository';
 import {
   BASE_SESSION_PRICE,
   FREE_TRIAL_DAYS,
@@ -24,11 +24,10 @@ import {
   MAX_DISCOUNT,
   MINIMUM_DISCOUNT_ELIGIBLE_SESSIONS,
   RechargeMetadata,
-  RechargeType,
+  Recharge,
   SessionType,
-  Usage,
   ValidityStatus,
-} from './schemas/usage.schema';
+} from './schemas/recharge.schema';
 
 @Injectable()
 export class StripeService {
@@ -39,7 +38,7 @@ export class StripeService {
     private readonly plansRepository: PlansRepository,
     private readonly subscriptionsRepository: SubscriptionsRepository,
     private readonly usersRepository: UsersRepository,
-    private readonly usagesRepository: UsagesRepository,
+    private readonly rechargesRepository: RechargesRepository,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY'),
@@ -464,12 +463,12 @@ export class StripeService {
     }
   }
 
-  async createUsageDocAndStartFreeTrial(user: Partial<User>) {
+  async createRechargeDocAndStartFreeTrial(user: Partial<User>) {
     try {
-      const recharge: RechargeType = {
+      const recharge = await this.rechargesRepository.create({
+        userId: user.userId,
         paymentIntentId: FREE_TRIAL_PAYMENT_ID,
         sessionId: FREE_TRIAL_PAYMENT_ID,
-        invoiceId: null,
         rechargeAmount: 0,
         sessionsBought: FREE_TRIAL_SESSIONS,
         sessionsUsed: 0,
@@ -478,12 +477,8 @@ export class StripeService {
           new Date().setDate(new Date().getDate() + FREE_TRIAL_DAYS),
         ).getTime(),
         validityStatus: ValidityStatus.ACTIVE,
-      };
-      const usage = await this.usagesRepository.create({
-        userId: user.userId,
-        rechargeHistory: [recharge],
-      } as Usage);
-      return usage;
+      } as Recharge);
+      return recharge;
     } catch (error) {
       throw new HttpException(
         `StripeError: ${error.message}`,
@@ -494,33 +489,32 @@ export class StripeService {
 
   async checkUsableCreditsAndEligibility(user: Partial<User>): Promise<{
     message: string;
-    eligibleRecharge: RechargeType;
+    eligibleRecharge: Recharge;
   }> {
     try {
-      const usage = await this.usagesRepository.findOne({
-        userId: user.userId,
-      });
-      const recharges = usage.rechargeHistory;
-      const activeRecharges = recharges.filter(
-        (recharge) => recharge.validityStatus === ValidityStatus.ACTIVE,
-      );
-
-      if (!activeRecharges.length)
-        return {
-          message: 'No active recharge found.',
-          eligibleRecharge: null,
-        };
-
-      const usableRecharges = activeRecharges.filter(
-        (recharge) => recharge.sessionsUsed < recharge.sessionsBought,
+      const usableRecharges = await this.rechargesRepository.find(
+        {
+          userId: user.userId,
+          validityStatus: ValidityStatus.ACTIVE,
+          $expr: {
+            $lt: ['$sessionsUsed', '$sessionsBought'],
+          },
+        },
+        {
+          page: 1,
+          limit: 1,
+          sort: {
+            startDate: 1,
+          },
+        },
       );
 
       if (!usableRecharges.length)
         return {
-          message: 'You have exhausted all your sessions. Please recharge.',
+          message:
+            'Oops! Either you do not have an active recharge or have exhausted all your sessions.',
           eligibleRecharge: null,
         };
-      usableRecharges.sort((a, b) => a.startDate - b.startDate);
       return {
         message: 'You are eligible to start a new session.',
         eligibleRecharge: usableRecharges[0],
@@ -534,12 +528,9 @@ export class StripeService {
     }
   }
 
-  async deductSessionFromRecharge(
-    user: Partial<User>,
-    recharge: RechargeType,
-  ): Promise<boolean> {
+  async deductSessionFromRecharge(recharge: Recharge): Promise<boolean> {
     try {
-      await this.usagesRepository.increaseSessionCount(user, recharge);
+      await this.rechargesRepository.increaseSessionCount(recharge);
       return true;
     } catch (error) {
       console.log('Error while deducting sessions: ', error);
@@ -606,27 +597,16 @@ export class StripeService {
         },
         metadata,
       });
-      await this.usagesRepository.findOneAndUpdate(
-        {
-          userId: user.userId,
-        },
-        {
-          $push: {
-            rechargeHistory: {
-              paymentIntentId: null,
-              sessionId: paymentSession.id,
-              invoiceId: null,
-              rechargeAmount: this.calculateDiscountedTotalPrice(quantity),
-              sessionsBought: quantity,
-              sessionsUsed: 0,
-              startDate: Date.now(),
-              endDate: Date.now(),
-              validityStatus: ValidityStatus.PAYMENT_PENDING,
-            },
-          },
-          updated_at: Date.now(),
-        },
-      );
+      await this.rechargesRepository.create({
+        userId: user.userId,
+        sessionId: paymentSession.id,
+        rechargeAmount: this.calculateDiscountedTotalPrice(quantity),
+        sessionsBought: quantity,
+        sessionsUsed: 0,
+        startDate: Date.now(),
+        endDate: Date.now(),
+        validityStatus: ValidityStatus.PAYMENT_PENDING,
+      } as Recharge);
       return paymentSession;
     } catch (error) {
       throw new HttpException(
@@ -637,32 +617,102 @@ export class StripeService {
   }
 
   async updateRechargeSuccess(object: Stripe.Checkout.Session): Promise<void> {
-    try {
-      const user = await this.usersRepository.findOne({
-        stripeCustomerId: object.customer as string,
-      });
-      const usage = await this.usagesRepository.findOne({
-        userId: user.userId,
-      });
-      const recharge = usage.rechargeHistory.find(
-        (recharge) => recharge.sessionId === object.id,
+    const userExist = await this.usersRepository.exists({
+      stripeCustomerId: object.customer as string,
+    });
+    if (!userExist)
+      throw new HttpException('User not found.', HttpStatus.NOT_FOUND);
+    const rechargeExist = await this.rechargesRepository.exists({
+      sessionId: object.id,
+    });
+    if (!rechargeExist)
+      throw new HttpException(
+        'Recharge not found in history.',
+        HttpStatus.NOT_FOUND,
       );
-      if (!recharge)
-        throw new HttpException(
-          'Recharge not found in usage history.',
-          HttpStatus.NOT_FOUND,
-        );
-      if (recharge.validityStatus === ValidityStatus.ACTIVE)
-        throw new HttpException(
-          'Recharge already activated.',
-          HttpStatus.BAD_REQUEST,
-        );
 
-      await this.usagesRepository.updatePaymentSuccessAndAddValidity(
-        user,
-        recharge,
-        object,
+    const recharge = await this.rechargesRepository.findOne({
+      sessionId: object.id,
+    });
+
+    if (recharge.validityStatus === ValidityStatus.ACTIVE)
+      throw new HttpException(
+        'Recharge is already active.',
+        HttpStatus.FORBIDDEN,
       );
+
+    try {
+      await this.rechargesRepository.updatePaymentSuccessAndAddValidity(object);
+    } catch (error) {
+      throw new HttpException(
+        `InternalServerError: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getRecharges(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<Recharge[]> {
+    const userExists = await this.usersRepository.exists({
+      userId,
+    });
+    if (!userExists)
+      throw new HttpException('User not found.', HttpStatus.NOT_FOUND);
+    try {
+      const recharges = await this.rechargesRepository.find(
+        {
+          userId,
+        },
+        {
+          page,
+          limit,
+          sort: {
+            endDate: -1,
+          },
+        },
+      );
+      return recharges;
+    } catch (error) {
+      throw new HttpException(
+        `InternalServerError: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getDownloadInvoicePdfUrl(
+    user: User,
+    invoiceId: string,
+  ): Promise<{
+    url: string;
+  }> {
+    const invoiceExists = await this.rechargesRepository.exists({
+      invoiceId,
+    });
+    if (!invoiceExists)
+      throw new HttpException(
+        'Invoice not found. Either invoice ID is incorrect or invoice is not generated, as the payment might be pending.',
+        HttpStatus.NOT_FOUND,
+      );
+
+    const recharge = await this.rechargesRepository.findOne({
+      invoiceId,
+    });
+
+    if (recharge.userId !== user.userId && user.role !== 'admin')
+      throw new HttpException(
+        'You are not authorized to download this invoice.',
+        HttpStatus.FORBIDDEN,
+      );
+
+    try {
+      const invoice = await this.stripe.invoices.retrieve(invoiceId);
+      return {
+        url: invoice.invoice_pdf,
+      };
     } catch (error) {
       throw new HttpException(
         `InternalServerError: ${error.message}`,

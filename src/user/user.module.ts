@@ -21,8 +21,8 @@ import {
   Evaluation,
   EvaluationSchema,
 } from 'src/station/schemas/evaluation.schema';
-import { UsagesRepository } from 'src/stripe/repositories/usage.repository';
-import { Usage, UsageSchema } from 'src/stripe/schemas/usage.schema';
+import { RechargesRepository } from 'src/stripe/repositories/recharge.repository';
+import { Recharge, RechargeSchema } from 'src/stripe/schemas/recharge.schema';
 
 @Module({
   imports: [
@@ -31,7 +31,9 @@ import { Usage, UsageSchema } from 'src/stripe/schemas/usage.schema';
       { name: ExamSession.name, schema: ExamSessionSchema },
     ]),
     MongooseModule.forFeature([{ name: Chat.name, schema: ChatSchema }]),
-    MongooseModule.forFeature([{ name: Usage.name, schema: UsageSchema }]),
+    MongooseModule.forFeature([
+      { name: Recharge.name, schema: RechargeSchema },
+    ]),
     MongooseModule.forFeature([
       { name: Evaluation.name, schema: EvaluationSchema },
     ]),
@@ -48,7 +50,7 @@ import { Usage, UsageSchema } from 'src/stripe/schemas/usage.schema';
     ExamSessionsRepository,
     ChatsRepository,
     EvaluationRepository,
-    UsagesRepository,
+    RechargesRepository,
   ],
   exports: [UserService],
 })

@@ -13,7 +13,7 @@ import { StripeService } from 'src/stripe/stripe.service';
 import { ExamSessionsRepository } from 'src/chat/repositories/examSession.repository';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
 import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
-import { UsagesRepository } from 'src/stripe/repositories/usage.repository';
+import { RechargesRepository } from 'src/stripe/repositories/recharge.repository';
 
 @Injectable()
 export class UserService {
@@ -24,7 +24,7 @@ export class UserService {
     private readonly examSessionsRepository: ExamSessionsRepository,
     private readonly chatsRepository: ChatsRepository,
     private readonly evaluationRepository: EvaluationRepository,
-    private readonly usagesRepository: UsagesRepository,
+    private readonly rechargesRepository: RechargesRepository,
   ) {}
 
   async createUser(
@@ -50,7 +50,7 @@ export class UserService {
           updated_at: Date.now(),
         },
       );
-      await this.stripeService.createUsageDocAndStartFreeTrial(user);
+      await this.stripeService.createRechargeDocAndStartFreeTrial(user);
     } else user = await this.usersRepository.create(request as User);
 
     if (user.profile_picture) {
@@ -217,7 +217,7 @@ export class UserService {
       },
     );
 
-    await this.stripeService.createUsageDocAndStartFreeTrial(updatedUser);
+    await this.stripeService.createRechargeDocAndStartFreeTrial(updatedUser);
 
     delete updatedUser.metadata;
     return updatedUser;
@@ -229,12 +229,16 @@ export class UserService {
     limit: number,
   ): Promise<User[]> {
     let users = [];
-    if (!userIds) users = await this.usersRepository.find({}, { page, limit });
+    if (!userIds)
+      users = await this.usersRepository.find(
+        {},
+        { page, limit, sort: { created_at: -1 } },
+      );
     else {
       const userIdsList = userIds.split(',');
       users = await this.usersRepository.find(
         { userId: { $in: userIdsList } },
-        { page, limit },
+        { page, limit, sort: { created_at: -1 } },
       );
     }
 
@@ -269,7 +273,7 @@ export class UserService {
       await this.evaluationRepository.delete({
         associatedSession: { $in: sessionIds },
       });
-      await this.usagesRepository.deleteOne({ userId });
+      await this.rechargesRepository.delete({ userId });
 
       const user = await this.usersRepository.findOne({ userId });
       await this.stripeService.deleteCustomer(user.stripeCustomerId);

@@ -13,13 +13,15 @@ import {
 import { SubscriptionsRepository } from './repositories/subscription.repository';
 import { User, UserSchema } from 'src/user/schemas/user.schema';
 import { UsersRepository } from 'src/user/repositories/user.repository';
-import { Usage, UsageSchema } from './schemas/usage.schema';
-import { UsagesRepository } from './repositories/usage.repository';
+import { Recharge, RechargeSchema } from './schemas/recharge.schema';
+import { RechargesRepository } from './repositories/recharge.repository';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Plan.name, schema: PlanSchema }]),
-    MongooseModule.forFeature([{ name: Usage.name, schema: UsageSchema }]),
+    MongooseModule.forFeature([
+      { name: Recharge.name, schema: RechargeSchema },
+    ]),
     MongooseModule.forFeature([
       { name: Subscription.name, schema: SubscriptionSchema },
     ]),
@@ -38,14 +40,14 @@ import { UsagesRepository } from './repositories/usage.repository';
     PlansRepository,
     SubscriptionsRepository,
     UsersRepository,
-    UsagesRepository,
+    RechargesRepository,
   ],
   controllers: [StripeController],
   exports: [
     StripeService,
     PlansRepository,
     SubscriptionsRepository,
-    UsagesRepository,
+    RechargesRepository,
   ],
 })
 export class StripeModule {}

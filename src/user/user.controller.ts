@@ -141,18 +141,17 @@ export class UserController {
     return res.getResponse();
   }
 
-  @Delete(':userId')
+  @Delete()
   @UseGuards(JwtAuthGuard)
   async deleteUser(
     @CurrentUser() user: User,
-    @Param('userId') userId: string,
+    @Query('userId') userId: string,
   ): Promise<ApiResponseType> {
-    if (!userId) {
-      throw new UnprocessableEntityException("Please provide user's Id.");
-    }
-    if (user.userId !== userId && user.role !== 'admin') {
-      throw new UnauthorizedException('You are not allowed to delete user');
-    }
+    if (userId) {
+      if (user.userId !== userId && user.role !== 'admin')
+        throw new UnauthorizedException('You are not allowed to delete user');
+    } else userId = user.userId;
+
     await this.userService.deleteUser(userId);
     const res = new ApiResponse('User deleted successfully', null, 200, null);
     return res.getResponse();
