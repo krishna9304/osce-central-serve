@@ -819,20 +819,13 @@ export class StationService {
         '100%',
         securedMarksOutOf12,
       );
-      console.log(
-        totalClinicalMarks,
-        totalFindingsMarks,
-        securedMarksOutOf12,
-        securedMarks,
-        totalSecurableMarks,
-      );
     } catch (error) {
       this.socketService.updateReportGenerationProgress(userId, '100%', 0);
       this.socketService.throwError(
         userId,
         'Evaluation report generation failed',
       );
-      console.log(
+      console.error(
         'There is some error caused while producing the evaluation',
         error,
       );
@@ -891,6 +884,7 @@ export class StationService {
       patientId: patient.patientId,
       patientName: patient.patientName,
       patientAge: patient.age,
+      patientSex: patient.sex,
       candidateInstructions: station.candidateInstructions,
       patientAvatar: patient.avatar
         ? await this.azureBlobUtil.getTemporaryPublicUrl(patient.avatar)
