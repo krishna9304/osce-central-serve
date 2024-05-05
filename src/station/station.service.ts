@@ -225,6 +225,18 @@ export class StationService {
       );
     }
   }
+
+  validateCLinicalChecklist(clinicalChecklist: any): string[] {
+    const errors = [];
+    if (typeof clinicalChecklist.question !== 'string')
+      errors.push('Validation Error: "question" must be a string.');
+
+    if (typeof clinicalChecklist.marks !== 'number')
+      errors.push('Validation Error: "marks" must be a number.');
+
+    return errors;
+  }
+
   async createEvaluator(evaluatorRequestData: CreateEvaluatorRequest) {
     const { associatedStation } = evaluatorRequestData;
 
@@ -245,6 +257,25 @@ export class StationService {
       throw new BadRequestException(
         'Evaluator already exists for the provided station.',
       );
+
+    if (evaluatorRequestData.clinicalChecklist) {
+      if (!Array.isArray(evaluatorRequestData.clinicalChecklist)) {
+        throw new BadRequestException(
+          'Clinical Checklist must be an array of objects.',
+        );
+      }
+
+      if (evaluatorRequestData.clinicalChecklist.length > 0) {
+        for (const clinicalChecklist of evaluatorRequestData.clinicalChecklist) {
+          const errs = this.validateCLinicalChecklist(clinicalChecklist);
+          if (errs.length) {
+            throw new BadRequestException(
+              `Invalid clinical checklist object. ${errs.join(' ')}`,
+            );
+          }
+        }
+      }
+    }
 
     try {
       await this.evaluatorRepository.create({
@@ -617,7 +648,7 @@ export class StationService {
       session,
       user.userId,
       user.name,
-      station.stationName,
+      station,
     );
   }
 
@@ -625,7 +656,7 @@ export class StationService {
     session: ExamSession,
     userId: string,
     userName: string,
-    stationName: string,
+    station: Station,
   ): Promise<void> {
     let totalEvaluationProgressPercentage = 10;
     this.socketService.updateReportGenerationProgress(
@@ -772,16 +803,9 @@ export class StationService {
       const totalSecurableMarks = totalClinicalMarks + totalFindingsMarks;
       const securedMarksOutOf12 = (securedMarks / totalSecurableMarks) * 12;
 
-      console.log(
-        securedMarks,
-        totalClinicalMarks,
-        totalFindingsMarks,
-        totalSecurableMarks,
-      );
-
       await this.evaluationRepository.create({
         associatedSession: session.sessionId,
-        stationName: stationName,
+        stationName: station.stationName,
         clinicalChecklist: markedClinicalChecklist,
         nonClinicalChecklist: markedNonClinicalChecklist,
         marksObtained: securedMarksOutOf12,
@@ -844,6 +868,24 @@ export class StationService {
     const evaluation = await this.evaluationRepository.findOne({
       associatedSession: sessionId,
     });
+
+    const station = await this.stationRepository.findOne({
+      stationId: session.stationId,
+    });
+
+    const patient = await this.patientRepository.findOne({
+      associatedStation: session.stationId,
+    });
+
+    evaluation.metadata = {
+      patientId: patient.patientId,
+      patientName: patient.patientName,
+      patientAge: patient.age,
+      candidateInstructions: station.candidateInstructions,
+      patientAvatar: patient.avatar
+        ? await this.azureBlobUtil.getTemporaryPublicUrl(patient.avatar)
+        : null,
+    };
 
     return evaluation;
   }
