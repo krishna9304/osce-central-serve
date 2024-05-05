@@ -17,6 +17,16 @@ export class SocketService {
     );
   }
 
+  async emitMessage(
+    payload: {
+      content: string;
+      sessionId: string;
+    },
+    userId,
+  ): Promise<void> {
+    this.socketGateway.handleChatCompletion(null, payload, userId);
+  }
+
   async throwError(userId: string, error: string): Promise<void> {
     this.socketGateway.sendError(userId, error);
   }

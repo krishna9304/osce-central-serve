@@ -54,7 +54,6 @@ import { StripeModule } from 'src/stripe/stripe.module';
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     forwardRef(() => AuthModule),
     UtilModule,
-    forwardRef(() => SocketModule),
     StripeModule,
   ],
   controllers: [StationController],
@@ -72,5 +71,6 @@ import { StripeModule } from 'src/stripe/stripe.module';
     SocketGateway,
     SocketService,
   ],
+  exports: [StationService, StationsRepository],
 })
 export class StationModule {}

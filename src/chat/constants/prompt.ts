@@ -113,11 +113,18 @@ export const getEvaluatorSystemPromptForClinicalChecklist = (
   - A guidance library is used to generate the exact answer based on certain keywords. You will not deviate from the generated answer.\n
   
   \nThe script of the conversation is as follows:\n
-  ${chats.map((chat) =>
-    chat.role === 'user'
-      ? 'Dr. ' + userFirstName + ': ' + chat.content + '\n'
-      : patientName.split(' ')[0] + ': ' + chat.content + '\n',
-  )}\n`;
+  ${
+    chats.length < 2
+      ? 'Dr. ' +
+        userFirstName +
+        "didn't have any conversation with the patient. There's nothing to evaluate."
+      : chats.map((chat, idx) => {
+          if (idx === 0) return '';
+          return chat.role === 'user'
+            ? 'Dr. ' + userFirstName + ': ' + chat.content + '\n'
+            : patientName.split(' ')[0] + ': ' + chat.content + '\n';
+        })
+  }\n`;
   return evaluatorSystemPrompt;
 };
 
@@ -196,10 +203,20 @@ export const getEvaluatorSystemPromptForNonClinicalChecklist = (
       provided an evaluation report based on what you saw and heard as per the given script.\n
     
     \nThe script of the conversation is as follows:\n
-    ${chats.map((chat) =>
-      chat.role === 'user'
-        ? 'Dr. ' + userFirstName + ': ' + chat.content + '\n'
-        : patientName.split(' ')[0] + ': ' + chat.content + '\n',
-    )}\n`;
+    ${
+      chats.length < 2
+        ? 'Dr. ' +
+          userFirstName +
+          "didn't have any conversation with the patient."
+        : chats.map((chat) =>
+            chat.role === 'user'
+              ? 'Dr. ' + userFirstName + ': ' + chat.content + '\n'
+              : patientName.split(' ')[0] + ': ' + chat.content + '\n',
+          )
+    }\n`;
   return evaluatorSystemPrompt;
 };
+
+export const initialSessionMessageFromTheUser = `From here on, the consultation role-play will begin. I AM THE DOCTOR - DR. KRISHNA. You are the patient. 
+I will ask you questions about your symptoms and medical history. You will answer to each of the questions I ask in shortest possible way. 
+Do not throw all the details at once. If you are unsure, you can ask me for help. Let's start! Please give a brief introduction about yourself.`;

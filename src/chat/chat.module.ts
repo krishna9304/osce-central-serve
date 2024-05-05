@@ -21,6 +21,9 @@ import {
 import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
 import { StripeModule } from 'src/stripe/stripe.module';
 import { ElevenLabsUtil } from 'src/utils/elevenlabs.util';
+import { UtilModule } from 'src/utils/util.module';
+import { StationService } from 'src/station/station.service';
+import { StationModule } from 'src/station/station.module';
 
 @Module({
   imports: [
@@ -36,6 +39,8 @@ import { ElevenLabsUtil } from 'src/utils/elevenlabs.util';
     ]),
     forwardRef(() => AuthModule),
     StripeModule,
+    UtilModule,
+    StationModule,
   ],
   controllers: [ChatController],
   providers: [

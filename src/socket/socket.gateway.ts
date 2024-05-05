@@ -89,7 +89,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleChatCompletion(
     client: Socket,
     payload: { content: string; sessionId: string },
+    userId: string = null,
   ): Promise<void> {
+    if (!client) client = this.userSocketMap.get(userId);
+    if (!client) {
+      this.logger.log('Socket not found.');
+      return;
+    }
     try {
       const { content, sessionId } = payload;
       if (!content || !sessionId) {

@@ -19,9 +19,8 @@ import { randomUUID } from 'crypto';
 import { AzureBlobUtil } from 'src/utils/azureblob.util';
 import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
 import { StripeService } from 'src/stripe/stripe.service';
-import { ChatsRepository } from './repositories/chat.repository';
-import { Chat } from './schemas/chat.schema';
-import { ElevenLabsUtil } from 'src/utils/elevenlabs.util';
+import { StationService } from 'src/station/station.service';
+import { initialSessionMessageFromTheUser } from './constants/prompt';
 
 @Injectable()
 export class ChatService {
@@ -32,8 +31,7 @@ export class ChatService {
     private readonly patientsRepository: PatientRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
     private readonly stripeService: StripeService,
-    private readonly chatsRepository: ChatsRepository,
-    private readonly elevenLabsUtil: ElevenLabsUtil,
+    private readonly stationService: StationService,
   ) {}
 
   async startExamSession(
@@ -41,7 +39,6 @@ export class ChatService {
     user: User,
   ): Promise<
     ExamSession & {
-      patientInitialMessage: { msg: string; audioBuffer: string };
       metadata: {
         patientName: string;
         stationName: string;
@@ -125,24 +122,16 @@ export class ChatService {
       );
     }
 
-    await this.chatsRepository.create({
-      sessionId: createdExamSession.sessionId,
-      role: 'user',
-      content: `Hi there! I'm ${user.name}. I'll be your doctor today. Let's get started!`,
-    } as Chat);
-
-    const aiChat = await this.chatsRepository.create({
-      sessionId: createdExamSession.sessionId,
-      role: 'assistant',
-      content: `Hi Doctor, My name is ${patient.patientName}. I need your help!`,
-    } as Chat);
+    this.stationService.emitMessage(
+      {
+        content: initialSessionMessageFromTheUser,
+        sessionId: createdExamSession.sessionId,
+      },
+      user.userId,
+    );
 
     return {
       ...createdExamSession,
-      patientInitialMessage: {
-        msg: aiChat.content,
-        audioBuffer: null,
-      },
       metadata: {
         patientName: patient.patientName,
         stationName: stationId,

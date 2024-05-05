@@ -18,7 +18,7 @@ import { EvaluatorRepository } from './repositories/evaluator.repository';
 import { Stream } from './schemas/stream.schema';
 import { StationCategory } from './schemas/category.schema';
 import { Station } from './schemas/station.schema';
-import { Findings, Patient, SubCategoryType } from './schemas/patient.schema';
+import { Patient, SubCategoryType } from './schemas/patient.schema';
 import { Evaluator } from './schemas/evaluator.schema';
 import {
   getEvaluatorSystemPromptForClinicalChecklist,
@@ -720,7 +720,10 @@ export class StationService {
       // ****************Clinical Checklist Marking***************
       let totalClinicalMarks = 0;
       let securedMarks = 0;
-      let userPromptPrefix = `Hi expert medical evaluator, Please tell me whether the following activity happened during the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
+      let userPromptPrefix = `Hi expert medical evaluator, Please tell me whether the following activity happened during the consultation 
+      between Dr. ${userFirstName} and ${patient.patientName} in either "Yes" or "No" (Yes, if it happend. No, if it didn't). 
+      Please be very accurate when you choose one because this will determine how did the doctor perform the consultation: \n`;
+
       const markedClinicalChecklist: Array<ClinicalChecklistMarkingItem> = [];
       for await (const clinicalChecklistItem of evaluator.clinicalChecklist) {
         const evaluatorUserPrompt =
@@ -815,6 +818,13 @@ export class StationService {
         userId,
         '100%',
         securedMarksOutOf12,
+      );
+      console.log(
+        totalClinicalMarks,
+        totalFindingsMarks,
+        securedMarksOutOf12,
+        securedMarks,
+        totalSecurableMarks,
       );
     } catch (error) {
       this.socketService.updateReportGenerationProgress(userId, '100%', 0);
@@ -1039,5 +1049,9 @@ export class StationService {
         'Failed to update the evaluator. Kindly check the request parameters and abide by the constraints.',
       );
     }
+  }
+
+  async emitMessage(payload: { content: string; sessionId: string }, userId) {
+    this.socketService.emitMessage(payload, userId);
   }
 }
