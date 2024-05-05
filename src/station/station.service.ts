@@ -18,7 +18,7 @@ import { EvaluatorRepository } from './repositories/evaluator.repository';
 import { Stream } from './schemas/stream.schema';
 import { StationCategory } from './schemas/category.schema';
 import { Station } from './schemas/station.schema';
-import { Patient } from './schemas/patient.schema';
+import { Findings, Patient, SubCategoryType } from './schemas/patient.schema';
 import { Evaluator } from './schemas/evaluator.schema';
 import {
   getEvaluatorSystemPromptForClinicalChecklist,
@@ -121,6 +121,55 @@ export class StationService {
       );
     }
   }
+
+  validateFindings(findings: any): string[] {
+    const errors = [];
+    if (typeof findings.name !== 'string' || findings.name.trim() === '')
+      errors.push('Validation Error: "name" must be a non-empty string.');
+
+    if (typeof findings.marks !== 'number')
+      errors.push('Validation Error: "marks" must be a number.');
+
+    if (
+      findings.subcategory === undefined ||
+      !Object.values(SubCategoryType).includes(findings.subcategory)
+    )
+      errors.push(
+        `Validation Error: "subcategory" must be one of the following values: ${Object.values(
+          SubCategoryType,
+        ).join(', ')}.`,
+      );
+
+    if (
+      (findings.image && findings.value) ||
+      (!findings.image && !findings.value)
+    )
+      errors.push(
+        'Validation Error: Either "image" or "value" must be present, but not both.',
+      );
+
+    if (findings.value) {
+      if (
+        !Array.isArray(findings.value) ||
+        (findings.value.length > 0 &&
+          !findings.value.every(
+            (item) =>
+              typeof item.key === 'string' && typeof item.value === 'string',
+          ))
+      ) {
+        errors.push(
+          'Validation Error: "value" must be an array of { key: string, value: string }.' +
+            findings.name,
+        );
+      }
+    }
+
+    if (findings.image !== undefined && typeof findings.image !== 'string')
+      errors.push('Validation Error: "image" must be a string when provided.');
+
+    return errors;
+  }
+
   async createPatient(
     patientRequestData: CreatePatientRequest,
     avatar: Express.Multer.File,
@@ -144,12 +193,28 @@ export class StationService {
         'Patient already exists for the provided station.',
       );
 
-    try {
-      if (avatar) {
-        const avatarUploadName = await this.azureBlobUtil.uploadImage(avatar);
-        patientRequestData.avatar = avatarUploadName;
+    if (avatar) {
+      const avatarUploadName = await this.azureBlobUtil.uploadImage(avatar);
+      patientRequestData.avatar = avatarUploadName;
+    }
+
+    if (patientRequestData.findings) {
+      if (!Array.isArray(patientRequestData.findings)) {
+        throw new BadRequestException('Findings must be an array of objects.');
       }
 
+      if (patientRequestData.findings.length > 0) {
+        for (const finding of patientRequestData.findings) {
+          const errs = this.validateFindings(finding);
+          if (errs.length) {
+            throw new BadRequestException(
+              `Invalid findings object. ${errs.join(' ')}`,
+            );
+          }
+        }
+      }
+    }
+    try {
       await this.patientRepository.create({
         ...patientRequestData,
       } as Patient);

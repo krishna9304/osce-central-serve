@@ -8,12 +8,22 @@ export interface Conversation {
   assistant: string;
 }
 
+export enum SubCategoryType {
+  EXAMINATION = 'examination',
+  INVESTIGATION = 'investigation',
+}
+
+export interface FindingValue {
+  key: string;
+  value: string;
+}
+
 export interface Findings {
   image?: string;
   name: string;
-  value: string;
+  value?: FindingValue[];
   marks: number;
-  subcategory: string;
+  subcategory: SubCategoryType;
 }
 
 export interface ContextualParam {

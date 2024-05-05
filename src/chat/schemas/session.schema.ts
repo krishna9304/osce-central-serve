@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { AbstractDocument } from 'src/database/abstract.schema';
+import { FindingValue } from 'src/station/schemas/patient.schema';
 
 export enum ExamSessionStatus {
   ACTIVE = 'active',
@@ -16,7 +17,7 @@ export enum FindingStatus {
 export interface FindingsRecord {
   id: string;
   finding: string;
-  value: string;
+  value?: FindingValue[];
   status: FindingStatus;
   marks: number;
   subcategory: string;
