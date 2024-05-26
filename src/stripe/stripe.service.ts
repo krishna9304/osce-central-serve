@@ -4,6 +4,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Station } from 'src/station/schemas/station.schema';
@@ -27,7 +28,20 @@ import {
   Recharge,
   SessionType,
   ValidityStatus,
+  STRIPE_RECHARGE_PRODUCT_ID,
 } from './schemas/recharge.schema';
+import { RechargePriceDto } from './dto/recharge-price.dto';
+import { CouponDto, CouponType, CouponValidity } from './dto/coupon.dto';
+
+interface PromoCodeData {
+  couponId: string;
+  promotionCode: string;
+  minimumSessionsToOrder: number;
+  description: string;
+  discountType: CouponType;
+  percentOff: number;
+  fixedOff: number;
+}
 
 @Injectable()
 export class StripeService {
@@ -558,17 +572,12 @@ export class StripeService {
     quantity: number,
   ): Promise<Stripe.Checkout.Session> {
     try {
-      const totalPrice = parseInt(
-        (this.calculateDiscountedTotalPrice(quantity) * 100).toFixed(),
+      const rechargePriceData = await this.stripe.products.retrieve(
+        STRIPE_RECHARGE_PRODUCT_ID,
       );
-      const stripePrice = await this.stripe.prices.create({
-        currency: 'inr',
-        unit_amount: totalPrice,
-        product_data: {
-          name: 'osce.ai session recharge',
-          active: true,
-        },
-      });
+      const stripePrice = await this.stripe.prices.retrieve(
+        rechargePriceData.default_price as string,
+      );
       const metadata: RechargeMetadata | any = {
         UserId: user.userId,
         Name: user.name,
@@ -583,10 +592,11 @@ export class StripeService {
         mode: 'payment',
         success_url: 'https://www.osceai.uk/',
         cancel_url: 'https://www.osceai.uk/cancel',
+        allow_promotion_codes: true,
         line_items: [
           {
-            price: stripePrice.id,
-            quantity: 1,
+            price: rechargePriceData.default_price as string,
+            quantity,
           },
         ],
         invoice_creation: {
@@ -600,7 +610,7 @@ export class StripeService {
       await this.rechargesRepository.create({
         userId: user.userId,
         sessionId: paymentSession.id,
-        rechargeAmount: this.calculateDiscountedTotalPrice(quantity),
+        rechargeAmount: (stripePrice.unit_amount / 100) * quantity,
         sessionsBought: quantity,
         sessionsUsed: 0,
         startDate: Date.now(),
@@ -718,6 +728,189 @@ export class StripeService {
         `InternalServerError: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+
+  async setRechargePrice(
+    data: RechargePriceDto,
+  ): Promise<{ product: Stripe.Product; price: Stripe.Price }> {
+    let product: Stripe.Product = null;
+    let priceData: Stripe.Price = null;
+    try {
+      product = await this.stripe.products.retrieve(STRIPE_RECHARGE_PRODUCT_ID);
+      const rechargeName = data.rechargeName ? data.rechargeName : product.name;
+      const rechargeDescription = data.rechargeDescription
+        ? data.rechargeDescription
+        : product.description;
+
+      priceData = await this.stripe.prices.retrieve(
+        product.default_price as string,
+      );
+      const baseRechargeAmount = data.baseRechargeAmount
+        ? data.baseRechargeAmount
+        : priceData.unit_amount / 100;
+
+      product = await this.stripe.products.update(STRIPE_RECHARGE_PRODUCT_ID, {
+        name: rechargeName,
+        description: rechargeDescription,
+      });
+
+      if (priceData.unit_amount !== baseRechargeAmount * 100) {
+        const newPrice = await this.stripe.prices.create({
+          currency: 'inr',
+          product: STRIPE_RECHARGE_PRODUCT_ID,
+          unit_amount: baseRechargeAmount * 100,
+        });
+        product = await this.stripe.products.update(
+          STRIPE_RECHARGE_PRODUCT_ID,
+          {
+            default_price: newPrice.id,
+          },
+        );
+        await this.stripe.prices.update(priceData.id, {
+          active: false,
+        });
+        priceData = newPrice;
+      }
+    } catch (_) {
+      product = await this.stripe.products.create({
+        id: STRIPE_RECHARGE_PRODUCT_ID,
+        name: data.rechargeName,
+        active: true,
+        description: data.rechargeDescription,
+        default_price_data: {
+          currency: 'inr',
+          unit_amount: data.baseRechargeAmount * 100,
+        },
+      });
+    }
+    return { product, price: priceData };
+  }
+
+  async getRechargePrice(): Promise<{
+    product: Stripe.Product;
+    price: Stripe.Price;
+  }> {
+    try {
+      const product = await this.stripe.products.retrieve(
+        STRIPE_RECHARGE_PRODUCT_ID,
+      );
+      const price = await this.stripe.prices.retrieve(
+        product.default_price as string,
+      );
+      return { product, price };
+    } catch (error) {
+      throw new HttpException(
+        `StripeError: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async createDiscountCoupon(couponRequestData: CouponDto): Promise<{
+    coupon: Stripe.Coupon;
+    promotionCodeData: Stripe.PromotionCode;
+  }> {
+    try {
+      const couponData: Stripe.CouponCreateParams = {
+        name: couponRequestData.couponName,
+        percent_off:
+          couponRequestData.couponType === CouponType.PERCENTAGE
+            ? couponRequestData.percentageOff
+            : undefined,
+        amount_off:
+          couponRequestData.couponType === CouponType.FIXED
+            ? couponRequestData.fixedOff * 100
+            : undefined,
+        currency: 'inr',
+        duration: couponRequestData.couponValidity,
+        duration_in_months:
+          couponRequestData.couponValidity === CouponValidity.MULTIPLE_MONTHS
+            ? 3
+            : undefined,
+        metadata: {
+          couponType: couponRequestData.couponType,
+        },
+      };
+
+      const coupon = await this.stripe.coupons.create(couponData);
+
+      const rechargePriceData = await this.stripe.products.retrieve(
+        STRIPE_RECHARGE_PRODUCT_ID,
+      );
+      const rechargePrice = await this.stripe.prices.retrieve(
+        rechargePriceData.default_price as string,
+      );
+
+      const minimumOrderAmount =
+        rechargePrice.unit_amount * couponRequestData.minimumSessionsToOrder;
+
+      const promotionCodeData = await this.stripe.promotionCodes.create({
+        coupon: coupon.id,
+        code: couponRequestData.promotionCode,
+        active: true,
+        restrictions: {
+          minimum_amount: minimumOrderAmount,
+          minimum_amount_currency: 'inr',
+        },
+        metadata: {
+          minimumSessionsToOrder: couponRequestData.minimumSessionsToOrder,
+          description: couponRequestData.description,
+        },
+      });
+      return { coupon, promotionCodeData };
+    } catch (error) {
+      throw new HttpException(
+        `StripeError: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getAllPromotionCodes(): Promise<PromoCodeData[]> {
+    try {
+      const promotionCodes = await this.stripe.promotionCodes.list({
+        active: true,
+      });
+
+      let allPromotionCodes: Array<PromoCodeData> = [];
+
+      for (const promotionCode of promotionCodes.data) {
+        const coupon = await this.stripe.coupons.retrieve(
+          promotionCode.coupon.id as string,
+        );
+        allPromotionCodes.push({
+          promotionCode: promotionCode.code,
+          couponId: coupon.id,
+          minimumSessionsToOrder: parseInt(
+            promotionCode.metadata.minimumSessionsToOrder,
+          ),
+          description: promotionCode.metadata.description,
+          discountType: coupon.metadata.couponType as CouponType,
+          percentOff: coupon.percent_off,
+          fixedOff: coupon.amount_off,
+        });
+      }
+      return allPromotionCodes;
+    } catch (error) {
+      throw new HttpException(
+        `StripeError: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deleteCoupon(couponId: string): Promise<void> {
+    try {
+      await this.stripe.coupons.retrieve(couponId);
+    } catch (error) {
+      throw new BadRequestException('Coupon not found.');
+    }
+
+    try {
+      await this.stripe.coupons.del(couponId);
+    } catch (error) {
+      throw new InternalServerErrorException(`StripeError: ${error.message}`);
     }
   }
 }

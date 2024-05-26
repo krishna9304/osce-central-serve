@@ -1,11 +1,14 @@
 import {
   BadRequestException,
+  Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
   Query,
   Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { StripeService } from './stripe.service';
@@ -19,6 +22,8 @@ import {
   MINIMUM_SESSIONS_TO_BUY,
   SessionType,
 } from './schemas/recharge.schema';
+import { RechargePriceDto } from './dto/recharge-price.dto';
+import { CouponDto } from './dto/coupon.dto';
 
 @Controller('stripe')
 export class StripeController {
@@ -74,6 +79,47 @@ export class StripeController {
     response.redirect('https://www.osceai.uk/');
   }
   */
+
+  @Post('recharge-price')
+  @UseGuards(JwtAuthGuard)
+  async createOrUpdateRechargePrice(
+    @CurrentUser() user: User,
+    @Body() body: RechargePriceDto,
+  ) {
+    if (user.role !== 'admin') {
+      throw new UnauthorizedException('You are not authorised.');
+    }
+    const { product, price } = await this.stripeService.setRechargePrice(body);
+    const res = new ApiResponse('Recharge price was set.', null, 200, {
+      priceData: {
+        rechargeId: product.id,
+        rechargeName: product.name,
+        rechargeDescription: product.description,
+        baseRechargeAmount: price.unit_amount / 100,
+      },
+    });
+    return res.getResponse();
+  }
+
+  @Get('recharge-price')
+  @UseGuards(JwtAuthGuard)
+  async getRechargePrice(@CurrentUser() user: User) {
+    if (user.role !== 'admin') {
+      throw new UnauthorizedException(
+        'You are not authorised to view this data.',
+      );
+    }
+    const { product, price } = await this.stripeService.getRechargePrice();
+    const res = new ApiResponse('Recharge price fetched.', null, 200, {
+      priceData: {
+        rechargeId: product.id,
+        rechargeName: product.name,
+        rechargeDescription: product.description,
+        baseRechargeAmount: price.unit_amount / 100,
+      },
+    });
+    return res.getResponse();
+  }
 
   @Get('recharge-checkout-url')
   @UseGuards(JwtAuthGuard)
@@ -179,6 +225,64 @@ export class StripeController {
         break;
     }
 
+    return res.getResponse();
+  }
+
+  @Post('coupon')
+  @UseGuards(JwtAuthGuard)
+  async createCoupon(@CurrentUser() user: User, @Body() body: CouponDto) {
+    if (user.role !== 'admin') {
+      throw new UnauthorizedException(
+        'You are not authorised to create discount coupons.',
+      );
+    }
+    const { coupon, promotionCodeData } =
+      await this.stripeService.createDiscountCoupon(body);
+    const res = new ApiResponse('Coupon created.', null, 200, {
+      couponData: {
+        couponId: coupon.id,
+        couponName: coupon.name,
+        couponType: coupon.percent_off ? 'percentage' : 'fixed',
+        percentageOff: coupon.percent_off,
+        fixedOff: coupon.amount_off,
+        couponValidity: coupon.duration,
+        minimumSessionsToOrder:
+          promotionCodeData.metadata.minimumSessionsToOrder,
+        promotionCode: promotionCodeData.code,
+        description: promotionCodeData.metadata.description,
+      },
+    });
+    return res.getResponse();
+  }
+
+  @Get('coupon')
+  @UseGuards(JwtAuthGuard)
+  async getCoupons(@CurrentUser() user: User) {
+    if (user.role !== 'admin') {
+      throw new UnauthorizedException(
+        'You are not authorised to view discount coupons.',
+      );
+    }
+    const coupons = await this.stripeService.getAllPromotionCodes();
+    const res = new ApiResponse('All active Coupons fetched.', null, 200, {
+      couponCodes: coupons,
+    });
+    return res.getResponse();
+  }
+
+  @Delete('coupon/:couponId')
+  @UseGuards(JwtAuthGuard)
+  async deleteCoupon(
+    @CurrentUser() user: User,
+    @Param('couponId') couponId: string,
+  ) {
+    if (user.role !== 'admin') {
+      throw new UnauthorizedException(
+        'You are not authorised to delete discount coupons.',
+      );
+    }
+    await this.stripeService.deleteCoupon(couponId);
+    const res = new ApiResponse('Coupon deleted.', null, 200, null);
     return res.getResponse();
   }
 }

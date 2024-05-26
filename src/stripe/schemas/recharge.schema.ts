@@ -21,6 +21,7 @@ export const MINIMUM_DISCOUNT_ELIGIBLE_SESSIONS = 10;
 export const MINIMUM_SESSIONS_TO_BUY = 5;
 export const MAX_DISCOUNT = 0.2; // 20%
 export const RECHARGE_VALIDITY_DAYS = 30;
+export const STRIPE_RECHARGE_PRODUCT_ID = 'osceai-recharge';
 
 export interface RechargeMetadata {
   UserId: string;
@@ -47,7 +48,7 @@ export class Recharge extends AbstractDocument {
   @Prop({ required: true })
   sessionId: string;
 
-  @Prop({ default: null})
+  @Prop({ default: null })
   invoiceId: string;
 
   @Prop({ required: true })
