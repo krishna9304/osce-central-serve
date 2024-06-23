@@ -714,6 +714,8 @@ export class StationService {
         userFirstName,
         patient.patientName,
         chats,
+        evaluator.initialEvaluationPrompt,
+        evaluator.additionalInstructions,
       );
 
     try {
@@ -757,8 +759,11 @@ export class StationService {
           userFirstName,
           patient.patientName,
           chats,
+          evaluator.initialEvaluationPrompt,
+          evaluator.nonClinicalChecklist,
+          evaluator.additionalInstructions,
         );
-      userPromptPrefix = `Hi expert medical evaluator. Please give your remark in brief, if I ask you to evaluate the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
+      userPromptPrefix = `Dear expert medical evaluator. Please give your remark in brief, if I ask you to evaluate the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
       const markedNonClinicalChecklist: Array<NonClinicalChecklistMarkingItem> =
         [];
       for await (const nonClinicalChecklistItem of NonClinicalChecklist) {

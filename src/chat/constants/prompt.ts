@@ -1,6 +1,7 @@
 import { Patient } from 'src/station/schemas/patient.schema';
 import { User } from 'src/user/schemas/user.schema';
 import { Chat } from '../schemas/chat.schema';
+import { NonClinicalChecklistItem } from 'src/station/schemas/evaluator.schema';
 
 export const getInitalPatientPrompt = (user: User, patient: Patient) => {
   const patientPrompt = [
@@ -99,19 +100,20 @@ export const getEvaluatorSystemPromptForClinicalChecklist = (
   userFirstName: string,
   patientName: string,
   chats: Array<Chat>,
+  initialEvaluationPrompt: string,
+  additionalInstructions: string = '',
 ) => {
   const evaluatorSystemPrompt = `
-  You are an expert medical evaluator tasked with assessing a ${userFirstName}'s (a MBBS graduate doctor) performance in a simulated PLAB-2 medical consultation. 
-  This evaluation aims to provide a clear understanding of areas of strength and opportunities for improvement, encompassing a broad spectrum of clinical 
-  and communication skills essential for effective patient care. You have listened to the entire conversation and have noted the whole script of the consultation 
-  below. Now, while answering to any question related to the consultation, you will refer to the below script of the conversation and answer the questions accordingly. 
-  Please follow the below guidelines:\n
-  - You will be impartial when answering the questions.\n
-  - You will not provide any additional information apart from the script of the conversation.\n
-  - You will give the answers based on the script of the conversation and to-the-point according to whatever is asked.\n
-  - You will not provide any personal opinions or suggestions.\n
-  - A guidance library is used to generate the exact answer based on certain keywords. You will not deviate from the generated answer.\n
+  **CLinical Checklist Evaluation Instructions**\n
+  ${initialEvaluationPrompt}\n
   
+  ${
+    additionalInstructions.length
+      ? `Here are some additional instructions for you:\n
+    ${additionalInstructions}\n`
+      : ''
+  }
+
   \nThe script of the conversation is as follows:\n
   ${
     chats.length < 2
@@ -132,75 +134,22 @@ export const getEvaluatorSystemPromptForNonClinicalChecklist = (
   userFirstName: string,
   patientName: string,
   chats: Array<Chat>,
+  initialEvaluationPrompt: string,
+  nonClinicalChecklist: Array<NonClinicalChecklistItem>,
+  additionalInstructions: string = '',
 ) => {
   const evaluatorSystemPrompt = `
-  You are an expert medical evaluator tasked with assessing a ${userFirstName}'s (a MBBS graduate doctor) performance in a simulated PLAB-2 medical consultation. 
-  This evaluation aims to provide a clear understanding of areas of strength and opportunities for improvement, encompassing a broad spectrum of clinical 
-  and communication skills essential for effective patient care. You will always refer to the below script of the consultation conversation and give your remark/feedback accordingly. 
+  **Non-Clinical Checklist Evaluation Instructions**\n
+  ${initialEvaluationPrompt}\n 
   Here's how you should structure the user's evaluation report:\n
-  1. Structure of Consultation:\n
-    - For History based cases include the comment on the logical flow of how the user organises the consultation from history taking, through examination and diagnosis, 
-    to the management plan.\n
-    - For counselling based cases include the comment on the logical flow of how the user organises the consultation from introduction and setting the scene, 
-    through understanding the patient's perspective and providing information, to making shared decision making on next steps of management.\n
-  2. Clinical reasoning and Applied knowledge:\n
-    - Critically assess the user's application of clinical knowledge and comment in the following manner:\n
-      For history taking based cases include the brief comment on the following headings:\n
-        a) history taking - comment on missed diagnostic questions of important possible
-          differentials, red flag symptoms questions and any less relevant or unnecessary
-          questions/details asked by the user,
-        b) Comment on relevance of examinations and investigations done by the user,
-        c) Comment on the user's ability to accurately interpret examination findings and
-          investigations,
-        d) Comment on the Accuracy of diagnosis or differential diagnoses mentioned to the
-          patient,
-        e) Evaluate and Comment on the user's ability to identify key issues during the
-          consultation, prioritising patient concerns and addressing them effectively and,
-        f) Comment on the Accuracy and appropriateness of proposed management plan
-          including admission/referral to hospital/ specialist respectively, symptomatic and diagnosis specific management, 
-          escalation to seniors when needed, and follow-up appointments based on current guidelines and evidence-based practice.\n
-
-      For counselling based cases include the brief comment on the following headings:\n
-        a) Introducing themselves to the patient with name and role and confirming patient's
-          identity to ensure confidentiality and correctness,
-        b) Establishing comfort and privacy of the patient when and where necessary to
-          encourage open communication,
-        c) Clearly setting the agenda for the consultation,
-        d) Exploring patient's understanding of the condition,
-        e) Identifying concerns or fears regarding their condition or the treatment they are
-          receiving,
-        f) Discussing all the available options for treatment or management including benefits
-          and risks associated with each,
-        g) Providing links to online resources and leaflets to help clarify complex information,
-        h) Encouraging questions at any point to ensure patient understands the information provided,
-        i) Valuing the patient's input or preferences in making decisions about treatment or management,
-        j) Aiming for a collaborative decision making of next steps, ensuring the patient feels supported in the decision making process,
-        k) Setting up follow-up appointments/ referrals/ escalations appropriately to ensure effectiveness of agreed management.\n
-
-  3. Language and Communication Skills demonstration:\n
-    - Deeply evaluate and comment on the user's ability to communicate effectively, which
-      includes explaining medical terms in an understandable and jargon free manner, demonstrating empathy, and actively listening to the patient's concerns.
-    - Observe and comment on the user's ability to build rapport with the patient, creating a comfortable and trusting environment.
-    - Measure and comment on the depth of empathy shown towards the patient, noting the user's responsiveness to the patient's emotional and physical state.
-    - Assess listening skills, noting how the user responds to verbal and non-verbal cues from the patient.\n
-  4. Professionalism and Ethical Consideration demonstration:\n
-    - Pay attention to the user's professionalism, maintenance of patient confidentiality, respect
-      toward simulated patients, and awareness of ethical considerations in clinical practice and comment along with specific examples from the consultation 
-      where the user can improve the most.\n
-  5. Overall feedback and Improvement Areas:\n
-    - Provide specific feedback on incidents or interactions during the simulation, highlighting
-      well-handled aspects and areas needing improvement.
-    - Focus on any missed opportunities in history taking, overlooked physical signs, or gaps in
-      patient condition and management explanation.
-    - Offer structured, constructive, and actionable suggestions for improvement, including
-      recommending additional readings, practising specific skills, or reflecting on patient interactions to enhance empathy and communication.
-    - At the end you will Include reference links to relevant online resources from, but not limited to www.nhs.uk , www.medscape.co.uk , www.youtube.com , 
-      www.osmosis.org , www.geekymedics.com , www.uptodate.com , www.bmjlearning.com for further study.\n
+  
+  ${nonClinicalChecklist.map(({ label, instructions }, idx) => {
+    return `${idx + 1}. ${label}:\n
+    Instructions: ${instructions}\n`;
+  })}
 
   - Additional Intructions:\n
-    - Do not include headings in your evaluation report. Just write the evaluation in a paragraph format.\n
-    - Do not mention anything about the below script of the conversation provided to you, in your evaluation report. You were there when this consultation happened, and you
-      provided an evaluation report based on what you saw and heard as per the given script.\n
+    ${additionalInstructions}\n
     
     \nThe script of the conversation is as follows:\n
     ${

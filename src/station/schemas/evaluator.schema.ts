@@ -9,6 +9,11 @@ export interface ChecklistItem {
   marks: number;
 }
 
+export interface NonClinicalChecklistItem {
+  label: string;
+  instructions: string;
+}
+
 @Schema({ versionKey: false })
 export class Evaluator extends AbstractDocument {
   _id: Types.ObjectId;
@@ -27,6 +32,15 @@ export class Evaluator extends AbstractDocument {
 
   @Prop({ default: OpenAIModel.GPT3_5_TURBO, enum: OpenAIModel })
   openAiModel: string;
+
+  @Prop({ required: true })
+  initialEvaluationPrompt: string;
+
+  @Prop({ required: true })
+  nonClinicalChecklist: Array<NonClinicalChecklistItem>;
+
+  @Prop({ default: '' })
+  additionalInstructions: string;
 
   @Prop({ default: null })
   created_at: number;
