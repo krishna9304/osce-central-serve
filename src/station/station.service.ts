@@ -765,16 +765,19 @@ export class StationService {
         const evaluatorUserPrompt =
           userPromptPrefix +
           `Give remarks/feedback for the judging criteria - "${nonClinicalChecklistItem.label}"`;
-        const evalRemark = await this.openAiUtil.getChatCompletion([
-          {
-            role: 'system',
-            content: evaluatorSystemPromptForNonClinicalChecklist,
-          },
-          {
-            role: 'user',
-            content: evaluatorUserPrompt,
-          },
-        ]);
+        const evalRemark = await this.openAiUtil.getChatCompletion(
+          [
+            {
+              role: 'system',
+              content: evaluatorSystemPromptForNonClinicalChecklist,
+            },
+            {
+              role: 'user',
+              content: evaluatorUserPrompt,
+            },
+          ],
+          evaluator.openAiModel,
+        );
 
         totalEvaluationProgressPercentage += 2;
         this.socketService.updateReportGenerationProgress(

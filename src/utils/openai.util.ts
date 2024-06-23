@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { OpenAIModel } from 'src/station/schemas/patient.schema';
 
 @Injectable()
 export class OpenAiUtil {
@@ -11,18 +12,20 @@ export class OpenAiUtil {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${this.configService.get<string>('OPENAI_API_KEY')}`,
   };
-  model = this.configService.get<string>('GPT_MODEL');
   max_tokens = 200;
   temperature = 0.7;
 
-  async getChatCompletion(prompt: Array<{ role: string; content: string }>) {
+  async getChatCompletion(
+    prompt: Array<{ role: string; content: string }>,
+    model: string,
+  ) {
     const response = await axios.post(
       this.url,
       {
-        model: this.model,
         max_tokens: this.max_tokens,
         temperature: this.temperature,
         messages: prompt,
+        model,
       },
       { headers: this.headers },
     );
@@ -32,15 +35,16 @@ export class OpenAiUtil {
 
   async getChatCompletionsStream(
     prompt: Array<{ role: string; content: string }>,
+    model: string,
   ) {
     const response = await axios.post(
       this.url,
       {
         messages: prompt,
-        model: this.model,
         max_tokens: this.max_tokens,
         temperature: this.temperature,
         stream: true,
+        model,
       },
       { headers: this.headers, responseType: 'stream' },
     );

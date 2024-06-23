@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { AbstractDocument } from 'src/database/abstract.schema';
+import { OpenAIModel } from './patient.schema';
 
 export interface ChecklistItem {
   question: string;
@@ -23,6 +24,9 @@ export class Evaluator extends AbstractDocument {
 
   @Prop({ required: true })
   associatedStation: string;
+
+  @Prop({ default: OpenAIModel.GPT3_5_TURBO, enum: OpenAIModel })
+  openAiModel: string;
 
   @Prop({ default: null })
   created_at: number;

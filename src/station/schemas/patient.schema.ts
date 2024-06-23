@@ -31,6 +31,12 @@ export interface ContextualParam {
   description: string;
 }
 
+export enum OpenAIModel {
+  GPT3_5_TURBO = 'gpt-3.5-turbo',
+  GPT4O = 'gpt-4o',
+  GPT4 = 'gpt-4',
+}
+
 @Schema({ versionKey: false })
 export class Patient extends AbstractDocument {
   _id: Types.ObjectId;
@@ -82,6 +88,9 @@ export class Patient extends AbstractDocument {
 
   @Prop({ required: true })
   voiceId11Labs: string;
+
+  @Prop({ default: OpenAIModel.GPT3_5_TURBO, enum: OpenAIModel })
+  openAiModel: string;
 
   @Prop({ default: '' })
   patientSpecificAdditionalInstructions: string;

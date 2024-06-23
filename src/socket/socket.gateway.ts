@@ -146,7 +146,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.callOpenAIChatCompletionAnd11LabsVoiceApi(
         client,
         prompt,
-        patient.voiceId11Labs,
+        patient,
         sessionId,
       );
     } catch (error) {
@@ -191,11 +191,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async callOpenAIChatCompletionAnd11LabsVoiceApi(
     client: Socket,
     prompt: Array<{ role: string; content: string }>,
-    voiceId: string,
+    patient: Patient,
     sessionId: string,
   ) {
     try {
-      const opResponse = await this.openAiUtil.getChatCompletionsStream(prompt);
+      const opResponse = await this.openAiUtil.getChatCompletionsStream(
+        prompt,
+        patient.openAiModel,
+      );
       let textBuffer = Buffer.from([]);
       opResponse.data.on('data', (chunk) => {
         textBuffer = Buffer.concat([textBuffer, chunk]);
@@ -214,7 +217,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         const elResponse = await this.elevenLabsUtil.getAudioStream(
           fullMessage,
-          voiceId,
+          patient.voiceId11Labs,
         );
         let audioBuffer = Buffer.from([]);
         elResponse.data.on('data', (chunk) => {

@@ -15,7 +15,6 @@ import { ElevenLabsUtil } from './elevenlabs.util';
         AZURE_BLOB_CONTAINER_NAME: Joi.string().required(),
         OPENAI_API_KEY: Joi.string().required(),
         ELEVEN_LABS_API_KEY: Joi.string().required(),
-        GPT_MODEL: Joi.string().required(),
       }),
       envFilePath: '.env',
     }),

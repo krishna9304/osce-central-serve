@@ -1,5 +1,15 @@
-import { IsArray, IsNotEmpty, IsNumberString, IsString } from 'class-validator';
-import { ContextualParam, Findings } from '../schemas/patient.schema';
+import {
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsNumberString,
+  IsString,
+} from 'class-validator';
+import {
+  ContextualParam,
+  Findings,
+  OpenAIModel,
+} from '../schemas/patient.schema';
 
 export class CreatePatientRequest {
   patientId: string;
@@ -39,6 +49,11 @@ export class CreatePatientRequest {
   additionalContextualParameters: Array<ContextualParam>;
 
   ideasConcernsExpectations: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @IsEnum(OpenAIModel)
+  openAiModel: string;
 
   @IsNotEmpty()
   @IsString()
