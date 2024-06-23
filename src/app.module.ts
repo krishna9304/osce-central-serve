@@ -11,6 +11,7 @@ import { TwilioModule } from './twilio/twilio.module';
 import { StationModule } from './station/station.module';
 import { ChatModule } from './chat/chat.module';
 import { SocketModule } from './socket/socket.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SocketModule } from './socket/socket.module';
     StationModule,
     ChatModule,
     SocketModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService, ConfigService],

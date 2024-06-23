@@ -15,6 +15,7 @@ import { User, UserSchema } from 'src/user/schemas/user.schema';
 import { UsersRepository } from 'src/user/repositories/user.repository';
 import { Recharge, RechargeSchema } from './schemas/recharge.schema';
 import { RechargesRepository } from './repositories/recharge.repository';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { RechargesRepository } from './repositories/recharge.repository';
       }),
       envFilePath: '.env',
     }),
+    EmailModule,
   ],
   providers: [
     StripeService,

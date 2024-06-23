@@ -14,6 +14,8 @@ import { ExamSessionsRepository } from 'src/chat/repositories/examSession.reposi
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
 import { EvaluationRepository } from 'src/station/repositories/evaluation.repository';
 import { RechargesRepository } from 'src/stripe/repositories/recharge.repository';
+import { EmailService } from 'src/email/email.service';
+import { EmailTemplate } from 'src/email/templates';
 
 @Injectable()
 export class UserService {
@@ -25,6 +27,7 @@ export class UserService {
     private readonly chatsRepository: ChatsRepository,
     private readonly evaluationRepository: EvaluationRepository,
     private readonly rechargesRepository: RechargesRepository,
+    private readonly emailService: EmailService,
   ) {}
 
   async createUser(
@@ -59,7 +62,8 @@ export class UserService {
       );
     }
     delete user.metadata;
-
+    if (user.email)
+      this.emailService.sendEmail(user.email, EmailTemplate.signup_success);
     return user;
   }
 
@@ -220,6 +224,11 @@ export class UserService {
     await this.stripeService.createRechargeDocAndStartFreeTrial(updatedUser);
 
     delete updatedUser.metadata;
+    if (updatedUser.email)
+      this.emailService.sendEmail(
+        updatedUser.email,
+        EmailTemplate.signup_success,
+      );
     return updatedUser;
   }
 

@@ -104,11 +104,6 @@ export class StripeController {
   @Get('recharge-price')
   @UseGuards(JwtAuthGuard)
   async getRechargePrice(@CurrentUser() user: User) {
-    if (user.role !== 'admin') {
-      throw new UnauthorizedException(
-        'You are not authorised to view this data.',
-      );
-    }
     const { product, price } = await this.stripeService.getRechargePrice();
     const res = new ApiResponse('Recharge price fetched.', null, 200, {
       priceData: {
@@ -257,12 +252,7 @@ export class StripeController {
 
   @Get('coupon')
   @UseGuards(JwtAuthGuard)
-  async getCoupons(@CurrentUser() user: User) {
-    if (user.role !== 'admin') {
-      throw new UnauthorizedException(
-        'You are not authorised to view discount coupons.',
-      );
-    }
+  async getCoupons() {
     const coupons = await this.stripeService.getAllPromotionCodes();
     const res = new ApiResponse('All active Coupons fetched.', null, 200, {
       couponCodes: coupons,

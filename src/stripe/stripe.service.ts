@@ -32,6 +32,10 @@ import {
 } from './schemas/recharge.schema';
 import { RechargePriceDto } from './dto/recharge-price.dto';
 import { CouponDto, CouponType, CouponValidity } from './dto/coupon.dto';
+import { EmailService } from 'src/email/email.service';
+import axios from 'axios';
+import fs from 'fs';
+import { EmailTemplate } from 'src/email/templates';
 
 interface PromoCodeData {
   couponId: string;
@@ -53,6 +57,7 @@ export class StripeService {
     private readonly subscriptionsRepository: SubscriptionsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly rechargesRepository: RechargesRepository,
+    private readonly emailService: EmailService,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY'),
@@ -626,6 +631,31 @@ export class StripeService {
     }
   }
 
+  async downloadReceiptPdf(paymentIntentId: string): Promise<Buffer> {
+    const paymentIntent =
+      await this.stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (!paymentIntent || !paymentIntent.latest_charge) {
+      throw new HttpException(
+        'Payment Intent not found or has no charges.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    const chargeId = paymentIntent.latest_charge as string;
+    const charge = await this.stripe.charges.retrieve(chargeId);
+
+    if (!charge || !charge.receipt_url) {
+      throw new HttpException('Receipt not found.', HttpStatus.NOT_FOUND);
+    }
+    const pdfUrl = `${charge.receipt_url.split('?')[0]}/pdf`;
+
+    const response = await axios.get(pdfUrl, {
+      responseType: 'arraybuffer',
+    });
+
+    return Buffer.from(response.data, 'binary');
+  }
+
   async updateRechargeSuccess(object: Stripe.Checkout.Session): Promise<void> {
     const userExist = await this.usersRepository.exists({
       stripeCustomerId: object.customer as string,
@@ -652,7 +682,33 @@ export class StripeService {
       );
 
     try {
+      const user = await this.usersRepository.findOne({
+        stripeCustomerId: object.customer as string,
+      });
       await this.rechargesRepository.updatePaymentSuccessAndAddValidity(object);
+
+      const { invoiceNumber } = await this.getDownloadInvoicePdfUrl(
+        user,
+        recharge.invoiceId,
+      );
+      const pdfBuffer = await this.downloadReceiptPdf(
+        object.payment_intent as string,
+      );
+
+      const base64Content = pdfBuffer.toString('base64');
+
+      await this.emailService.sendEmail(
+        user.email,
+        EmailTemplate.recharge_success,
+        [
+          {
+            filename: `Receipt-${invoiceNumber}.pdf`,
+            content: base64Content,
+            disposition: 'attachment',
+            type: 'application/pdf',
+          },
+        ],
+      );
     } catch (error) {
       throw new HttpException(
         `InternalServerError: ${error.message}`,
@@ -698,6 +754,7 @@ export class StripeService {
     invoiceId: string,
   ): Promise<{
     url: string;
+    invoiceNumber: string;
   }> {
     const invoiceExists = await this.rechargesRepository.exists({
       invoiceId,
@@ -722,6 +779,7 @@ export class StripeService {
       const invoice = await this.stripe.invoices.retrieve(invoiceId);
       return {
         url: invoice.invoice_pdf,
+        invoiceNumber: invoice.number,
       };
     } catch (error) {
       throw new HttpException(

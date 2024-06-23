@@ -23,6 +23,7 @@ import {
 } from 'src/station/schemas/evaluation.schema';
 import { RechargesRepository } from 'src/stripe/repositories/recharge.repository';
 import { Recharge, RechargeSchema } from 'src/stripe/schemas/recharge.schema';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { Recharge, RechargeSchema } from 'src/stripe/schemas/recharge.schema';
     UtilModule,
     StripeModule,
     ChatModule,
+    EmailModule,
   ],
   controllers: [UserController],
   providers: [
