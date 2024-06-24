@@ -41,7 +41,6 @@ import {
 import { SocketService } from 'src/socket/socket.service';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
-import { NonClinicalChecklist } from './assets/checklist';
 import { OpenAiUtil } from 'src/utils/openai.util';
 import { StripeService } from 'src/stripe/stripe.service';
 
@@ -766,7 +765,7 @@ export class StationService {
       userPromptPrefix = `Dear expert medical evaluator. Please give your remark in brief, if I ask you to evaluate the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
       const markedNonClinicalChecklist: Array<NonClinicalChecklistMarkingItem> =
         [];
-      for await (const nonClinicalChecklistItem of NonClinicalChecklist) {
+      for await (const nonClinicalChecklistItem of evaluator.nonClinicalChecklist) {
         const evaluatorUserPrompt =
           userPromptPrefix +
           `Give remarks/feedback for the judging criteria - "${nonClinicalChecklistItem.label}"`;
@@ -795,7 +794,7 @@ export class StationService {
           remark: evalRemark,
         });
       }
-      // ********************Findings MArking**********************
+      // ********************Findings Marking**********************
 
       let totalFindingsMarks = 0;
       for (const finding of session.findingsRecord) {
@@ -1055,5 +1054,121 @@ export class StationService {
 
   async emitMessage(payload: { content: string; sessionId: string }, userId) {
     this.socketService.emitMessage(payload, userId);
+  }
+
+  async deleteStream(streamId: string): Promise<void> {
+    const streamExists = await this.streamRepository.exists({
+      streamId,
+    });
+    if (!streamExists)
+      throw new NotFoundException(
+        'Provided stream ID is invalid and does not match our records.',
+      );
+    try {
+      const categories = await this.stationCategoryRepository.find({
+        associatedStream: streamId,
+      });
+      for await (const category of categories) {
+        const stations = await this.stationRepository.find({
+          stationCategory: category.categoryId,
+        });
+        for await (const station of stations) {
+          await this.deleteStation(station.stationId);
+        }
+        await this.stationCategoryRepository.deleteOne({
+          categoryId: category.categoryId,
+        });
+      }
+      await this.streamRepository.deleteOne({ streamId });
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'Something went wrong while deleting the stream.',
+      );
+    }
+  }
+
+  async deleteCategory(categoryId: string): Promise<void> {
+    const categoryExists = await this.stationCategoryRepository.exists({
+      categoryId,
+    });
+    if (!categoryExists)
+      throw new NotFoundException(
+        'Provided category ID is invalid and does not match our records.',
+      );
+    try {
+      const stations = await this.stationRepository.find({
+        stationCategory: categoryId,
+      });
+      for await (const station of stations) {
+        await this.deleteStation(station.stationId);
+      }
+      await this.stationCategoryRepository.deleteOne({ categoryId });
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'Something went wrong while deleting the category.',
+      );
+    }
+  }
+
+  async deleteStation(stationId: string): Promise<void> {
+    const stationExists = await this.stationRepository.exists({
+      stationId,
+    });
+    if (!stationExists)
+      throw new NotFoundException(
+        'Provided station ID is invalid and does not match our records.',
+      );
+    const station = await this.stationRepository.findOne({ stationId });
+    try {
+      await this.evaluatorRepository.deleteOne({
+        associatedStation: stationId,
+      });
+      await this.patientRepository.deleteOne({ associatedStation: stationId });
+      await this.stationRepository.deleteOne({ stationId });
+      await this.stripeService.deleteStationProduct(station.stripeProductId);
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'Something went wrong while deleting the station.',
+      );
+    }
+  }
+
+  async deletePatient(patientId: string): Promise<void> {
+    const patientExists = await this.patientRepository.exists({
+      patientId,
+    });
+    if (!patientExists)
+      throw new NotFoundException(
+        'Provided patient ID is invalid and does not match our records.',
+      );
+    try {
+      await this.patientRepository.deleteOne({ patientId });
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'Something went wrong while deleting the patient.',
+      );
+    }
+  }
+
+  async deleteEvaluator(evaluatorId: string): Promise<void> {
+    const evaluatorExists = await this.evaluatorRepository.exists({
+      evaluatorId,
+    });
+    if (!evaluatorExists)
+      throw new NotFoundException(
+        'Provided evaluator ID is invalid and does not match our records.',
+      );
+    try {
+      await this.evaluatorRepository.deleteOne({ evaluatorId });
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        'Something went wrong while deleting the evaluator.',
+      );
+    }
   }
 }

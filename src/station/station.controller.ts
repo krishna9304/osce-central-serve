@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -480,6 +481,111 @@ export class StationController {
       null,
       200,
       updatedEvaluator,
+    );
+    return res.getResponse();
+  }
+
+  @Delete(':stationId')
+  @UseGuards(JwtAuthGuard)
+  async deleteStation(
+    @CurrentUser() user: User,
+    @Param('stationId') stationId: string,
+  ) {
+    if (user.role !== 'admin')
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can delete stations.',
+      );
+
+    await this.stationService.deleteStation(stationId);
+
+    const res = new ApiResponse(
+      'Station deleted successfully',
+      null,
+      200,
+      null,
+    );
+    return res.getResponse();
+  }
+
+  @Delete('stream/:streamId')
+  @UseGuards(JwtAuthGuard)
+  async deleteStream(
+    @CurrentUser() user: User,
+    @Param('streamId') streamId: string,
+  ) {
+    if (user.role !== 'admin')
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can delete streams.',
+      );
+
+    await this.stationService.deleteStream(streamId);
+
+    const res = new ApiResponse('Stream deleted successfully', null, 200, null);
+    return res.getResponse();
+  }
+
+  @Delete('category/:categoryId')
+  @UseGuards(JwtAuthGuard)
+  async deleteCategory(
+    @CurrentUser() user: User,
+    @Param('categoryId') categoryId: string,
+  ) {
+    if (user.role !== 'admin')
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can delete categories.',
+      );
+
+    await this.stationService.deleteCategory(categoryId);
+
+    const res = new ApiResponse(
+      'Category deleted successfully',
+      null,
+      200,
+      null,
+    );
+    return res.getResponse();
+  }
+
+  @Delete('patient/:patientId')
+  @UseGuards(JwtAuthGuard)
+  async deletePatient(
+    @CurrentUser() user: User,
+    @Param('patientId') patientId: string,
+  ) {
+    if (user.role !== 'admin')
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can delete patients.',
+      );
+
+    await this.stationService.deletePatient(patientId);
+
+    const res = new ApiResponse(
+      'Patient deleted successfully',
+      null,
+      200,
+      null,
+    );
+    return res.getResponse();
+  }
+
+  @Delete('evaluator/:evaluatorId')
+  @UseGuards(JwtAuthGuard)
+  async deleteEvaluator(
+    @CurrentUser() user: User,
+    @Param('evaluatorId') evaluatorId: string,
+  ) {
+    if (user.role !== 'admin')
+      throw new UnauthorizedException(
+        'Unauthorized action. Only admins can delete evaluators.',
+      );
+
+    await this.stationService.deleteEvaluator(evaluatorId);
+
+    const res = new ApiResponse(
+      'Evaluator deleted successfully',
+      null,
+      200,
+      null,
     );
     return res.getResponse();
   }

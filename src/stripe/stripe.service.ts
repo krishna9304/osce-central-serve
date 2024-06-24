@@ -149,6 +149,17 @@ export class StripeService {
     }
   }
 
+  async deleteStationProduct(productId: string): Promise<void> {
+    try {
+      await this.stripe.products.update(productId, { active: false });
+    } catch (error) {
+      throw new HttpException(
+        `StripeError: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   async createOscePlan(plan: PlanDto): Promise<Plan> {
     try {
       const oscePlanProduct = await this.stripe.products.create({
