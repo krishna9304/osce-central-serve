@@ -1,5 +1,4 @@
 import { Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
   SubscribeMessage,
   WebSocketGateway,
@@ -7,7 +6,6 @@ import {
   OnGatewayDisconnect,
   OnGatewayConnection,
 } from '@nestjs/websockets';
-import axios from 'axios';
 import { Server, Socket } from 'socket.io';
 import { getInitalPatientPrompt } from 'src/chat/constants/prompt';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
@@ -24,6 +22,7 @@ import { UsersRepository } from 'src/user/repositories/user.repository';
 import { User } from 'src/user/schemas/user.schema';
 import { ElevenLabsUtil } from 'src/utils/elevenlabs.util';
 import { OpenAiUtil } from 'src/utils/openai.util';
+import { socketEvents } from './socket.events';
 
 @WebSocketGateway()
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -51,79 +50,69 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.removeSocketFromMap(client);
   }
 
-  @SubscribeMessage('REG_SOC')
+  @SubscribeMessage(socketEvents.registerSocket())
   async handleSocRegister(
     client: Socket,
     payload: { user: string },
   ): Promise<void> {
-    const userId = payload.user;
-    if (!userId) {
-      client.emit('ERROR', {
-        msg: 'UserID is null.',
+    try {
+      const userId = payload.user;
+      if (!userId) {
+        throw new Error('User ID is null.');
+      }
+
+      const userExists = await this.usersRepository.exists({ userId: userId });
+      if (!userExists) {
+        throw new Error('User not found.');
+      }
+
+      const existingSocket = this.userSocketMap.get(userId);
+      if (existingSocket && existingSocket !== client) {
+        existingSocket.disconnect();
+      }
+
+      this.userSocketMap.set(userId, client);
+      client.emit(socketEvents.registerSocketSuccess(), {
+        msg: 'Connection established with the socket server.',
       });
-      return;
-    }
 
-    const userExists = await this.usersRepository.exists({ userId: userId });
-    if (!userExists) {
-      client.emit('ERROR', {
-        msg: 'Unauthorized. User not found.',
+      this.printConnections();
+    } catch (error) {
+      client.emit(socketEvents.error(), {
+        msg: error.message,
       });
-      return;
+      this.logger.error(error);
     }
-
-    const existingSocket = this.userSocketMap.get(userId);
-    if (existingSocket && existingSocket !== client) {
-      existingSocket.disconnect();
-    }
-
-    this.userSocketMap.set(userId, client);
-    client.emit('REG_SOC_SUCCESS', {
-      msg: 'Connection established with the socket server.',
-    });
-
-    this.printConnections();
   }
 
-  @SubscribeMessage('CHAT_COMPLETION')
+  @SubscribeMessage(socketEvents.chatCompletion())
   async handleChatCompletion(
     client: Socket,
     payload: { content: string; sessionId: string },
     userId: string = null,
+    isInitialMessage: boolean = false,
   ): Promise<void> {
-    if (!client) client = this.userSocketMap.get(userId);
-    if (!client) {
-      this.logger.log('Socket not found.');
-      return;
-    }
     try {
+      if (!client) client = this.userSocketMap.get(userId);
+      if (!client) {
+        throw new Error('Client not found.');
+      }
       const { content, sessionId } = payload;
       if (!content || !sessionId) {
-        client.emit('ERROR', {
-          msg: 'Content or sessionId is null.',
-        });
-        return;
+        throw new Error('Content or session ID is null.');
       }
       const sessionExists = await this.examSessionsRepository.exists({
         sessionId,
       });
       if (!sessionExists) {
-        this.logger.log('Session not found.');
-        client.emit('ERROR', {
-          msg: 'Session not found.',
-        });
-        return;
+        throw new Error('Session not found.');
       }
 
       const session = await this.examSessionsRepository.findOne({
         sessionId,
       });
       if (session.status !== ExamSessionStatus.ACTIVE) {
-        this.logger.log('Session is not active.');
-        client.emit('ERROR', {
-          msg: 'Session is not active.',
-        });
-        return;
+        throw new Error('Session is not active.');
       }
 
       const station = await this.stationsRepository.findOne({
@@ -148,13 +137,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         prompt,
         patient,
         sessionId,
+        isInitialMessage,
       );
     } catch (error) {
-      client.emit('ERROR', {
+      client.emit(socketEvents.error(), {
         msg: error.message,
       });
       this.logger.error(error);
-      this.logger.log('Something went wrong. Please try again.');
     }
   }
 
@@ -193,6 +182,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     prompt: Array<{ role: string; content: string }>,
     patient: Patient,
     sessionId: string,
+    isInitialMessage: boolean,
   ) {
     try {
       const opResponse = await this.openAiUtil.getChatCompletionsStream(
@@ -225,14 +215,19 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
 
         elResponse.data.on('end', async () => {
-          client.emit('RECEIVE_CHAT_COMPLETION', {
+          let chatCompletionEvent =
+            socketEvents.receiveChatCompletion(sessionId);
+          if (isInitialMessage)
+            chatCompletionEvent = socketEvents.receiveFirstChatMessage();
+
+          client.emit(chatCompletionEvent, {
             msg: fullMessage,
             audioBuffer: audioBuffer.toString('base64'),
           });
         });
-        elResponse.data.on('error', (error) => {
+        elResponse.data.on(socketEvents.error(), (error) => {
           this.logger.error(error);
-          client.emit('ERROR', {
+          client.emit(socketEvents.error(), {
             msg: error.message,
           });
         });
@@ -244,15 +239,15 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         } as Chat);
       });
 
-      opResponse.data.on('error', (error) => {
+      opResponse.data.on(socketEvents.error(), (error) => {
         this.logger.error(error);
-        client.emit('ERROR', {
+        client.emit(socketEvents.error(), {
           msg: error.message,
         });
       });
     } catch (error) {
       this.logger.error(error);
-      client.emit('ERROR', {
+      client.emit(socketEvents.error(), {
         msg: error.message,
       });
       this.logger.error('Something went wrong. Please try again.');
@@ -292,10 +287,11 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     userId: string,
     percentage: string,
     score: number = null,
+    sessionId: string,
   ) {
     const client = this.userSocketMap.get(userId);
     if (client) {
-      client.emit('EVALUATION_REPORT_GENERATION_PROGRESS', {
+      client.emit(socketEvents.evaluationReportGenerationProgress(sessionId), {
         progress: percentage,
         score: score,
       });
@@ -305,7 +301,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async sendError(userId: string, error: string) {
     const client = this.userSocketMap.get(userId);
     if (client) {
-      client.emit('ERROR', {
+      client.emit(socketEvents.error(), {
         msg: error,
       });
     }

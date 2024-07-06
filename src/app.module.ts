@@ -6,7 +6,6 @@ import * as Joi from 'joi';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
-import { SocketGateway } from './socket/socket.gateway';
 import { TwilioModule } from './twilio/twilio.module';
 import { StationModule } from './station/station.module';
 import { ChatModule } from './chat/chat.module';

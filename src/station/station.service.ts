@@ -39,10 +39,10 @@ import {
   NonClinicalChecklistMarkingItem,
 } from './schemas/evaluation.schema';
 import { SocketService } from 'src/socket/socket.service';
-import axios from 'axios';
-import { ConfigService } from '@nestjs/config';
 import { OpenAiUtil } from 'src/utils/openai.util';
 import { StripeService } from 'src/stripe/stripe.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class StationService {
@@ -58,8 +58,8 @@ export class StationService {
     private readonly chatsRepository: ChatsRepository,
     private readonly evaluationRepository: EvaluationRepository,
     private readonly socketService: SocketService,
-    private readonly configService: ConfigService,
     private readonly stripeService: StripeService,
+    @InjectQueue('evaluation') private evaluationQueue: Queue,
   ) {}
 
   async createStream(streamRequestData: CreateStreamRequest) {
@@ -643,15 +643,10 @@ export class StationService {
       stationId: session.stationId,
     });
 
-    this.prepareEvaluationResultsInBackgrond(
-      session,
-      user.userId,
-      user.name,
-      station,
-    );
+    await this.evaluationQueue.add('evaluation', { session, user, station });
   }
 
-  async prepareEvaluationResultsInBackgrond(
+  async prepareEvaluationResultsInBackground(
     session: ExamSession,
     userId: string,
     userName: string,
@@ -660,12 +655,14 @@ export class StationService {
     let totalEvaluationProgressPercentage = 10;
     this.socketService.updateReportGenerationProgress(
       userId,
+      session.sessionId,
       totalEvaluationProgressPercentage + '%',
     );
 
     totalEvaluationProgressPercentage += 2;
     this.socketService.updateReportGenerationProgress(
       userId,
+      session.sessionId,
       totalEvaluationProgressPercentage + '%',
     );
 
@@ -676,6 +673,7 @@ export class StationService {
 
     this.socketService.updateReportGenerationProgress(
       userId,
+      session.sessionId,
       totalEvaluationProgressPercentage + '%',
     );
     const evaluator = await this.evaluatorRepository.findOne({
@@ -685,6 +683,7 @@ export class StationService {
     totalEvaluationProgressPercentage += 2;
     this.socketService.updateReportGenerationProgress(
       userId,
+      session.sessionId,
       totalEvaluationProgressPercentage + '%',
     );
     const chats = await this.chatsRepository.find({
@@ -700,11 +699,9 @@ export class StationService {
     totalEvaluationProgressPercentage += 10;
     this.socketService.updateReportGenerationProgress(
       userId,
+      session.sessionId,
       totalEvaluationProgressPercentage + '%',
     );
-
-    const evaluateServerURL =
-      this.configService.get<string>('EVALUATION_API_URL');
 
     const userFirstName = userName.split(' ')[0];
 
@@ -721,36 +718,53 @@ export class StationService {
       // ****************Clinical Checklist Marking***************
       let totalClinicalMarks = 0;
       let securedMarks = 0;
-      let userPromptPrefix = `Hi expert medical evaluator, Please tell me whether the following activity happened during the consultation 
-      between Dr. ${userFirstName} and ${patient.patientName} in either "Yes" or "No" (Yes, if it happend. No, if it didn't). 
+      let userPromptPrefix = `Hey, Please tell me whether the following activity happened during the consultation 
+      between Dr. ${userFirstName} and ${patient.patientName} in either "Yes" or "No" (Yes, if it happend. No, if it didn't).
+      No other response is accepted. You should respond with either "Yes" or "No", that's it. 
       Please be very accurate when you choose one because this will determine how did the doctor perform the consultation: \n`;
 
       const markedClinicalChecklist: Array<ClinicalChecklistMarkingItem> = [];
       for await (const clinicalChecklistItem of evaluator.clinicalChecklist) {
         const evaluatorUserPrompt =
           userPromptPrefix + clinicalChecklistItem.question;
-        const options = ['Yes', 'No'];
-        const res = await axios.post(evaluateServerURL, {
-          systemPrompt: evaluatorSystemPromptForClinicalChecklist,
-          userPrompt: evaluatorUserPrompt,
-          options,
-        });
+        const evalRemark = await this.openAiUtil.getChatCompletion(
+          [
+            {
+              role: 'system',
+              content: evaluatorSystemPromptForClinicalChecklist,
+            },
+            {
+              role: 'user',
+              content: evaluatorUserPrompt,
+            },
+          ],
+          evaluator.openAiModel,
+        );
+        console.log(clinicalChecklistItem.question, evalRemark);
 
         totalEvaluationProgressPercentage += 0.75;
         this.socketService.updateReportGenerationProgress(
           userId,
+          session.sessionId,
           totalEvaluationProgressPercentage + '%',
         );
 
         markedClinicalChecklist.push({
           question: clinicalChecklistItem.question,
-          score: res.data.data === 'Yes' ? clinicalChecklistItem.marks : 0,
+          score: evalRemark.toLowerCase().includes('yes')
+            ? clinicalChecklistItem.marks
+            : 0,
         });
         totalClinicalMarks += clinicalChecklistItem.marks;
-        securedMarks +=
-          res.data.data === 'Yes' ? clinicalChecklistItem.marks : 0;
+        securedMarks += evalRemark.toLowerCase().includes('yes')
+          ? clinicalChecklistItem.marks
+          : 0;
       }
-      this.socketService.updateReportGenerationProgress(userId, '60%');
+      this.socketService.updateReportGenerationProgress(
+        userId,
+        session.sessionId,
+        '60%',
+      );
 
       // **************Non-Clinical Checklist Marking*************
       const evaluatorSystemPromptForNonClinicalChecklist =
@@ -786,6 +800,7 @@ export class StationService {
         totalEvaluationProgressPercentage += 2;
         this.socketService.updateReportGenerationProgress(
           userId,
+          session.sessionId,
           totalEvaluationProgressPercentage + '%',
         );
 
@@ -808,6 +823,7 @@ export class StationService {
       totalEvaluationProgressPercentage += 5;
       this.socketService.updateReportGenerationProgress(
         userId,
+        session.sessionId,
         totalEvaluationProgressPercentage + '%',
       );
       const totalSecurableMarks = totalClinicalMarks + totalFindingsMarks;
@@ -823,11 +839,17 @@ export class StationService {
 
       this.socketService.updateReportGenerationProgress(
         userId,
+        session.sessionId,
         '100%',
         securedMarksOutOf12,
       );
     } catch (error) {
-      this.socketService.updateReportGenerationProgress(userId, '100%', 0);
+      this.socketService.updateReportGenerationProgress(
+        userId,
+        session.sessionId,
+        '100%',
+        0,
+      );
       this.socketService.throwError(
         userId,
         'Evaluation report generation failed',
@@ -1052,8 +1074,12 @@ export class StationService {
     }
   }
 
-  async emitMessage(payload: { content: string; sessionId: string }, userId) {
-    this.socketService.emitMessage(payload, userId);
+  async emitMessage(
+    payload: { content: string; sessionId: string },
+    userId,
+    isInitialMessage: boolean = false,
+  ) {
+    this.socketService.emitMessage(payload, userId, isInitialMessage);
   }
 
   async deleteStream(streamId: string): Promise<void> {

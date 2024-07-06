@@ -28,10 +28,10 @@ import { Chat, ChatSchema } from 'src/chat/schemas/chat.schema';
 import { ChatsRepository } from 'src/chat/repositories/chat.repository';
 import { Evaluation, EvaluationSchema } from './schemas/evaluation.schema';
 import { EvaluationRepository } from './repositories/evaluation.repository';
-import { SocketModule } from 'src/socket/socket.module';
 import { SocketService } from 'src/socket/socket.service';
 import { SocketGateway } from 'src/socket/socket.gateway';
 import { StripeModule } from 'src/stripe/stripe.module';
+import { BullProcessorModule } from 'src/bullmq/bullmq.module';
 
 @Module({
   imports: [
@@ -55,6 +55,7 @@ import { StripeModule } from 'src/stripe/stripe.module';
     forwardRef(() => AuthModule),
     UtilModule,
     StripeModule,
+    BullProcessorModule,
   ],
   controllers: [StationController],
   providers: [

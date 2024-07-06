@@ -128,6 +128,7 @@ export class ChatService {
         sessionId: createdExamSession.sessionId,
       },
       user.userId,
+      true,
     );
 
     return {

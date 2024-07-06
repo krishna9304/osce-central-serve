@@ -7,6 +7,7 @@ export class SocketService {
 
   async updateReportGenerationProgress(
     userId: string,
+    sessionId: string,
     percentage: string,
     score: number = null,
   ): Promise<void> {
@@ -14,6 +15,7 @@ export class SocketService {
       userId,
       percentage,
       score,
+      sessionId,
     );
   }
 
@@ -22,9 +24,15 @@ export class SocketService {
       content: string;
       sessionId: string;
     },
-    userId,
+    userId: string,
+    isInitialMessage: boolean = false,
   ): Promise<void> {
-    this.socketGateway.handleChatCompletion(null, payload, userId);
+    this.socketGateway.handleChatCompletion(
+      null,
+      payload,
+      userId,
+      isInitialMessage,
+    );
   }
 
   async throwError(userId: string, error: string): Promise<void> {
