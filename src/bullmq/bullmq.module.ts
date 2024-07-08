@@ -23,6 +23,7 @@ import { Redis } from 'ioredis';
         connection: {
           host: configService.get<string>('REDIS_HOST'),
           port: configService.get<number>('REDIS_PORT'),
+          password: configService.get<string>('REDIS_PASSWORD') || undefined,
         },
       }),
       inject: [ConfigService],
