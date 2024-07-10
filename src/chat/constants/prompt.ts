@@ -166,6 +166,8 @@ export const getEvaluatorSystemPromptForNonClinicalChecklist = (
   return evaluatorSystemPrompt;
 };
 
-export const initialSessionMessageFromTheUser = `From here on, the consultation role-play will begin. I AM THE DOCTOR - DR. KRISHNA. You are the patient. 
+export const initialSessionMessageFromTheUser = (
+  userName: string,
+) => `From here on, the consultation role-play will begin. I AM THE DOCTOR - DR. ${userName}. You are the patient. 
 I will ask you questions about your symptoms and medical history. You will answer to each of the questions I ask in shortest possible way. 
 Do not throw all the details at once. If you are unsure, you can ask me for help. Let's start! Please give a brief introduction about yourself. Start with your name`;

@@ -124,7 +124,7 @@ export class ChatService {
 
     this.stationService.emitMessage(
       {
-        content: initialSessionMessageFromTheUser,
+        content: initialSessionMessageFromTheUser(user.name),
         sessionId: createdExamSession.sessionId,
       },
       user.userId,
