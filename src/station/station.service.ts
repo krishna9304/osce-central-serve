@@ -718,10 +718,7 @@ export class StationService {
       // ****************Clinical Checklist Marking***************
       let totalClinicalMarks = 0;
       let securedMarks = 0;
-      let userPromptPrefix = `Hey, Please tell me whether the following activity happened during the consultation 
-      between Dr. ${userFirstName} and ${patient.patientName} in either "Yes" or "No" (Yes, if it happend. No, if it didn't).
-      No other response is accepted. You should respond with either "Yes" or "No", that's it. 
-      Please be very accurate when you choose one because this will determine how did the doctor perform the consultation: \n`;
+      let userPromptPrefix = `Evaluate the provided transcript of a consultation between Dr. ${userFirstName} and ${patient.patientName}. For each checklist item listed below, respond with "YES" if the item was mentioned during the consultation and "NO" if it was not. Do not include any additional words or explanations in your response: \n`;
 
       const markedClinicalChecklist: Array<ClinicalChecklistMarkingItem> = [];
       for await (const clinicalChecklistItem of evaluator.clinicalChecklist) {
