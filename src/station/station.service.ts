@@ -686,15 +686,12 @@ export class StationService {
       session.sessionId,
       totalEvaluationProgressPercentage + '%',
     );
-    const chats = await this.chatsRepository.find({
-      sessionId: session.sessionId,
-    });
-
-    chats.sort((a, b) => {
-      return (
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      );
-    });
+    const chats = await this.chatsRepository.find(
+      {
+        sessionId: session.sessionId,
+      },
+      { page: 1, limit: 10000, sort: { created_at: 1 } },
+    );
 
     totalEvaluationProgressPercentage += 10;
     this.socketService.updateReportGenerationProgress(

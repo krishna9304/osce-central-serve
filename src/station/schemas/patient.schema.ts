@@ -34,6 +34,7 @@ export interface ContextualParam {
 export enum OpenAIModel {
   GPT3_5_TURBO = 'gpt-3.5-turbo',
   GPT4O = 'gpt-4o',
+  GPT4O_MINI = 'gpt-4o-mini',
   GPT4 = 'gpt-4',
 }
 
