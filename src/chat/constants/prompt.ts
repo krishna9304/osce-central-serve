@@ -116,7 +116,7 @@ export const getEvaluatorSystemPromptForClinicalChecklist = (
 
   \nThe script of the conversation is as follows:\n
   ${
-    chats.length < 2
+    chats.length <= 2
       ? 'Dr. ' +
         userFirstName +
         "didn't have any conversation with the patient. There's nothing to evaluate."
@@ -153,15 +153,16 @@ export const getEvaluatorSystemPromptForNonClinicalChecklist = (
     
     \nThe script of the conversation is as follows:\n
     ${
-      chats.length < 2
+      chats.length <= 2
         ? 'Dr. ' +
           userFirstName +
           "didn't have any conversation with the patient."
-        : chats.map((chat) =>
+        : chats.map((chat, idx) => {
+            if (idx === 0) return '';
             chat.role === 'user'
               ? 'Dr. ' + userFirstName + ': ' + chat.content + '\n'
-              : patientName.split(' ')[0] + ': ' + chat.content + '\n',
-          )
+              : patientName.split(' ')[0] + ': ' + chat.content + '\n';
+          })
     }\n`;
   return evaluatorSystemPrompt;
 };
