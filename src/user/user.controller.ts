@@ -32,7 +32,7 @@ export class UserController {
     @CurrentUser() user: User,
     @Query() query: any,
   ): Promise<ApiResponseType> {
-    const userIds = query.userIds || null;
+    const filterQuery = query.q || null;
     if (!query.page || query.page < 1) query.page = 1;
     if (!query.limit || query.limit < 1) query.limit = 10;
 
@@ -42,7 +42,7 @@ export class UserController {
       );
     }
     const users = await this.userService.getUsers(
-      userIds,
+      filterQuery,
       parseInt(query.page),
       parseInt(query.limit),
     );

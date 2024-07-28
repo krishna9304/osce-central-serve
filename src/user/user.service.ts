@@ -233,20 +233,27 @@ export class UserService {
   }
 
   async getUsers(
-    userIds: string | null,
+    filterQuery: string | null,
     page: number,
     limit: number,
   ): Promise<User[]> {
     let users = [];
-    if (!userIds)
+    if (!filterQuery)
       users = await this.usersRepository.find(
         {},
         { page, limit, sort: { created_at: -1 } },
       );
     else {
-      const userIdsList = userIds.split(',');
       users = await this.usersRepository.find(
-        { userId: { $in: userIdsList } },
+        {
+          $or: [
+            { name: new RegExp(filterQuery, 'i') },
+            { userId: new RegExp(filterQuery, 'i') },
+            { stripeCustomerId: new RegExp(filterQuery, 'i') },
+            { phone: new RegExp(filterQuery, 'i') },
+            { email: new RegExp(filterQuery, 'i') },
+          ],
+        },
         { page, limit, sort: { created_at: -1 } },
       );
     }

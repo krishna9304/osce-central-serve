@@ -69,3 +69,9 @@ UserSchema.pre('save', function (next) {
   this.updated_at = Date.now();
   next();
 });
+
+UserSchema.index({ name: 1 });
+UserSchema.index({ userId: 1 });
+UserSchema.index({ stripeCustomerId: 1 });
+UserSchema.index({ phone: 1 });
+UserSchema.index({ email: 1 });
