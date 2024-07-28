@@ -4,6 +4,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { User } from 'src/user/schemas/user.schema';
 import { ExamSessionsRepository } from './repositories/examSession.repository';
@@ -21,6 +22,9 @@ import { EvaluationRepository } from 'src/station/repositories/evaluation.reposi
 import { StripeService } from 'src/stripe/stripe.service';
 import { StationService } from 'src/station/station.service';
 import { initialSessionMessageFromTheUser } from './constants/prompt';
+import { Chat } from './schemas/chat.schema';
+import { ChatsRepository } from './repositories/chat.repository';
+import { UsersRepository } from 'src/user/repositories/user.repository';
 
 @Injectable()
 export class ChatService {
@@ -29,6 +33,8 @@ export class ChatService {
     private readonly stationsRepository: StationsRepository,
     private readonly evaluationRepository: EvaluationRepository,
     private readonly patientsRepository: PatientRepository,
+    private readonly chatsRepository: ChatsRepository,
+    private readonly usersRepository: UsersRepository,
     private readonly azureBlobUtil: AzureBlobUtil,
     private readonly stripeService: StripeService,
     private readonly stationService: StationService,
@@ -233,19 +239,22 @@ export class ChatService {
   async getSessionDetails(sessionId: string, user: User): Promise<ExamSession> {
     const sessionExists = await this.examSessionsRepository.exists({
       sessionId,
-      associatedUser: user.userId,
     });
 
     if (!sessionExists) {
       throw new NotFoundException('Session not found.');
     }
 
-    try {
-      const session = await this.examSessionsRepository.findOne({
-        sessionId,
-        associatedUser: user.userId,
-      });
+    const session = await this.examSessionsRepository.findOne({
+      sessionId,
+    });
 
+    if (session.associatedUser !== user.userId && user.role !== 'admin') {
+      throw new UnauthorizedException(
+        'You are not allowed to view this session.',
+      );
+    }
+    try {
       const patient = await this.patientsRepository.findOne({
         associatedStation: session.stationId,
       });
@@ -272,14 +281,14 @@ export class ChatService {
   }
 
   async getSessionList(
-    user: User,
+    userId: string,
     page: number,
     limit: number,
   ): Promise<ExamSession[]> {
     try {
       const sessions = await this.examSessionsRepository.find(
         {
-          associatedUser: user.userId,
+          associatedUser: userId,
         },
         {
           limit,
@@ -320,6 +329,47 @@ export class ChatService {
     } catch (error) {
       throw new InternalServerErrorException(
         error.message || "Something went wrong. Coundn't get session list.",
+      );
+    }
+  }
+
+  async getChatHistory(sessionId: string, user: User): Promise<Chat[]> {
+    const sessionExists = await this.examSessionsRepository.exists({
+      sessionId,
+    });
+
+    if (!sessionExists) {
+      throw new NotFoundException('Session not found.');
+    }
+    const session = await this.examSessionsRepository.findOne({ sessionId });
+
+    if (session.associatedUser !== user.userId && user.role !== 'admin') {
+      throw new UnauthorizedException('You are not allowed to view this chat.');
+    }
+
+    try {
+      const sessionUser = await this.usersRepository.findOne({
+        userId: session.associatedUser,
+      });
+      const patient = await this.patientsRepository.findOne({
+        associatedStation: session.stationId,
+      });
+      const chatHistory = await this.chatsRepository.find(
+        { sessionId },
+        { page: 1, limit: 10000, sort: { created_at: 1 } },
+      );
+
+      const readableChatHistory = [];
+      for (const chat of chatHistory) {
+        readableChatHistory.push({
+          from: chat.role === 'user' ? sessionUser.name : patient.patientName,
+          message: chat.content,
+        });
+      }
+      return readableChatHistory.slice(1);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error.message || "Something went wrong. Coundn't get chat history.",
       );
     }
   }

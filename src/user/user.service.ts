@@ -276,9 +276,12 @@ export class UserService {
       if (!userExists) {
         throw new Error('User not found');
       }
-      const sessions = await this.examSessionsRepository.find({
-        associatedUser: userId,
-      });
+      const sessions = await this.examSessionsRepository.find(
+        {
+          associatedUser: userId,
+        },
+        { page: 1, limit: 10000 },
+      );
       const sessionIds = sessions.map((session) => session.sessionId);
       await this.chatsRepository.delete({
         sessionId: { $in: sessionIds },

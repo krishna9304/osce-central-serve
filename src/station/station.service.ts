@@ -520,9 +520,12 @@ export class StationService {
         );
       }
       const stationIds = stations.map((station) => station.stationId);
-      const patients = await this.patientRepository.find({
-        associatedStation: { $in: stationIds },
-      });
+      const patients = await this.patientRepository.find(
+        {
+          associatedStation: { $in: stationIds },
+        },
+        { page: 1, limit: stationIds.length },
+      );
 
       let stationsWithMetadata = [];
       for await (let station of stations) {
@@ -872,7 +875,7 @@ export class StationService {
       sessionId,
     });
 
-    if (session.associatedUser !== user.userId)
+    if (session.associatedUser !== user.userId && user.role !== 'admin')
       throw new BadRequestException(
         'You are not authorized to access this resource.',
       );
@@ -1085,13 +1088,19 @@ export class StationService {
         'Provided stream ID is invalid and does not match our records.',
       );
     try {
-      const categories = await this.stationCategoryRepository.find({
-        associatedStream: streamId,
-      });
+      const categories = await this.stationCategoryRepository.find(
+        {
+          associatedStream: streamId,
+        },
+        { page: 1, limit: 10000 },
+      );
       for await (const category of categories) {
-        const stations = await this.stationRepository.find({
-          stationCategory: category.categoryId,
-        });
+        const stations = await this.stationRepository.find(
+          {
+            stationCategory: category.categoryId,
+          },
+          { page: 1, limit: 10000 },
+        );
         for await (const station of stations) {
           await this.deleteStation(station.stationId);
         }
@@ -1117,9 +1126,12 @@ export class StationService {
         'Provided category ID is invalid and does not match our records.',
       );
     try {
-      const stations = await this.stationRepository.find({
-        stationCategory: categoryId,
-      });
+      const stations = await this.stationRepository.find(
+        {
+          stationCategory: categoryId,
+        },
+        { page: 1, limit: 10000 },
+      );
       for await (const station of stations) {
         await this.deleteStation(station.stationId);
       }

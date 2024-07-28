@@ -261,9 +261,12 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     newMessage: string,
   ): Promise<Array<{ role: string; content: string }>> {
     const prompt = getInitalPatientPrompt(user, patient);
-    const chats = await this.chatsRepository.find({
-      sessionId: session.sessionId,
-    });
+    const chats = await this.chatsRepository.find(
+      {
+        sessionId: session.sessionId,
+      },
+      { limit: 10000, page: 1, sort: { created_at: 1 } },
+    );
     chats.sort((a, b) => {
       return (
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()

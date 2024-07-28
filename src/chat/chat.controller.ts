@@ -1,11 +1,11 @@
 import {
   Controller,
-  ForbiddenException,
   Get,
   Param,
   Post,
   Put,
   Query,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -76,16 +76,42 @@ export class ChatController {
   @Get('session-list')
   @UseGuards(JwtAuthGuard)
   async getSessionList(@CurrentUser() user: User, @Query() query: any) {
+    let userId: string = query.userId || null;
+    if (user.role !== 'admin' && userId) {
+      throw new UnauthorizedException(
+        'You are not allowed to view other users session.',
+      );
+    }
+
+    if (!userId) userId = user.userId;
+
     if (!query.page || query.page < 1) query.page = 1;
     if (!query.limit || query.limit < 1) query.limit = 10;
 
     const sessionList = await this.chatService.getSessionList(
-      user,
+      userId,
       parseInt(query.page),
       parseInt(query.limit),
     );
 
     const res = new ApiResponse('Session list.', null, 200, sessionList);
+    return res.getResponse();
+  }
+
+  @Get('chat-history/:sessionId')
+  @UseGuards(JwtAuthGuard)
+  async getChatHistory(
+    @Param('sessionId') sessionId: string,
+    @CurrentUser() user: User,
+  ) {
+    const chatHistory = await this.chatService.getChatHistory(
+      sessionId,
+      user,
+    );
+
+    const res = new ApiResponse('Retrieved Chat history', null, 200, {
+      chatHistory,
+    });
     return res.getResponse();
   }
 }
