@@ -37,6 +37,9 @@ export class Station extends AbstractDocument {
   @Prop({ default: false })
   freeTierEligible: boolean;
 
+  @Prop({ default: 8 })
+  sessionDurationInMinutes: number;
+
   @Prop({ default: null })
   created_at: number;
 

@@ -80,6 +80,8 @@ export class ChatService {
       throw new NotFoundException('No patient found for this station.');
     }
 
+    const station = await this.stationsRepository.findOne({ stationId });
+
     const patient = await this.patientsRepository.findOne({
       associatedStation: stationId,
     });
@@ -106,6 +108,8 @@ export class ChatService {
       stationId,
       associatedUser: user.userId,
       findingsRecord: patientFindings,
+      startTime: Date.now(),
+      endTime: Date.now() + station.sessionDurationInMinutes * 60 * 1000,
     } as ExamSession;
 
     const createdExamSession =

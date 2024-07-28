@@ -68,8 +68,6 @@ ExamSessionSchema.pre('save', function (next) {
   this.sessionId = `${ExamSession.name}-${randomUUID()
     .replace('-', '')
     .slice(0, 10)}`;
-  this.startTime = Date.now();
-  this.endTime = Date.now() + 8 * 60 * 1000;
   this.created_at = Date.now();
   this.updated_at = Date.now();
   next();

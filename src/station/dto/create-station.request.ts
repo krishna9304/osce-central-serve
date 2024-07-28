@@ -28,6 +28,9 @@ export class CreateStationRequest {
   @IsString()
   candidateInstructions: string;
 
+  @IsNumber()
+  sessionDurationInMinutes: number;
+
   status: string;
 
   freeTierEligible: boolean;
