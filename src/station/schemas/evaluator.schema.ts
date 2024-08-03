@@ -11,7 +11,7 @@ export interface ChecklistItem {
 
 export interface NonClinicalChecklistItem {
   label: string;
-  instructions: string;
+  description: string;
 }
 
 @Schema({ versionKey: false })

@@ -25,6 +25,9 @@ import { initialSessionMessageFromTheUser } from './constants/prompt';
 import { Chat } from './schemas/chat.schema';
 import { ChatsRepository } from './repositories/chat.repository';
 import { UsersRepository } from 'src/user/repositories/user.repository';
+import { existsSync, mkdir, mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { cwd } from 'process';
 
 @Injectable()
 export class ChatService {
@@ -130,6 +133,16 @@ export class ChatService {
       throw new InternalServerErrorException(
         "Something went wrong. Coundn't start session.",
       );
+    }
+
+    try {
+      const logFileDir = join(cwd(), 'logs', createdExamSession.sessionId);
+      if (!existsSync(logFileDir)) {
+        mkdirSync(logFileDir, { recursive: true });
+      }
+      await writeFileSync(join(logFileDir, `chat.log`), '');
+    } catch (error) {
+      console.log('Error creating log file:', error);
     }
 
     this.stationService.emitMessage(

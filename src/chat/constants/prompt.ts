@@ -37,41 +37,29 @@ export const getInitalPatientPrompt = (user: User, patient: Patient) => {
     },
     {
       role: 'system',
-      content: `Your persona:\n
-                    ${patient.persona}`,
+      content: `Your persona:\n${patient.persona}`,
     },
     {
       role: 'system',
-      content: `You are presenting the following complaint:\n
-                    ${patient.presentingComplaint}`,
+      content: `You are presenting the following complaint:\n${patient.presentingComplaint}`,
     },
     {
       role: 'system',
-      content: `Your history of presenting complaint:\n
-                    ${patient.historyOfPresentingComplaint}`,
+      content: `Your history of presenting complaint:\n${patient.historyOfPresentingComplaint}`,
     },
     ...patient.additionalContextualParameters.map((param) => ({
       role: 'system',
-      content: `${param.heading}:\n
-                    ${param.description}`,
+      content: `${param.heading}:\n${param.description}\n`,
     })),
     {
       role: 'system',
-      content: `Some example conversations (Try to keep the conversation in a similar tone and linguistic flow as below):\n
-                    ${patient.exampleConversations
-                      .replaceAll(
-                        '{{patient}}',
-                        patient.patientName.split(' ')[0],
-                      )
-                      .replaceAll(
-                        '{{doctor}}',
-                        'Dr. ' + user.name.split(' ')[0],
-                      )}`,
+      content: `Some example conversations (Try to keep the conversation in a similar tone and linguistic flow as below):\n${patient.exampleConversations
+        .replaceAll('{{patient}}', patient.patientName.split(' ')[0])
+        .replaceAll('{{doctor}}', 'Dr. ' + user.name.split(' ')[0])}`,
     },
     {
       role: 'system',
-      content: `PATIENT SPECIFIC ADDITIONAL INSTRUCTIONS:\n
-                    ${patient.patientSpecificAdditionalInstructions}`,
+      content: `PATIENT SPECIFIC ADDITIONAL INSTRUCTIONS:\n${patient.patientSpecificAdditionalInstructions}`,
     },
     {
       role: 'system',
@@ -80,7 +68,7 @@ export const getInitalPatientPrompt = (user: User, patient: Patient) => {
     {
       role: 'system',
       content:
-        'Irrespective of however the person talking to you addresses you, you should always respond to them as - "Dr. [Doctor\'s Name]". For example, if the doctor\'s name is John, you should always address him as - "Dr. John". This is a strict guildeline and you should always follow this.',
+        'Irrespective of however the person talking to you addresses you, you should always respond to them as - "Dr." and their name. For example, if the doctor\'s name is John, you should always address him as - "Dr. John". This is a strict guildeline and you should always follow this.',
     },
     {
       role: 'system',
@@ -143,15 +131,12 @@ export const getEvaluatorSystemPromptForNonClinicalChecklist = (
   ${initialEvaluationPrompt}\n 
   Here's how you should structure the user's evaluation report:\n
   
-  ${nonClinicalChecklist.map(({ label, instructions }, idx) => {
-    return `${idx + 1}. ${label}:\n
-    Instructions: ${instructions}\n`;
+  ${nonClinicalChecklist.map(({ label, description }, idx) => {
+    return `${idx + 1}. ${label}:\nInstructions: ${description}\n\n`;
   })}
 
-  - Additional Intructions:\n
-    ${additionalInstructions}\n
-    
-    \nThe script of the conversation is as follows:\n
+  - Additional Intructions:\n${additionalInstructions}\n
+  The script of the conversation is as follows:\n
     ${
       chats.length <= 2
         ? 'Dr. ' +
@@ -159,7 +144,7 @@ export const getEvaluatorSystemPromptForNonClinicalChecklist = (
           "didn't have any conversation with the patient."
         : chats.map((chat, idx) => {
             if (idx === 0) return '';
-            chat.role === 'user'
+            return chat.role === 'user'
               ? 'Dr. ' + userFirstName + ': ' + chat.content + '\n'
               : patientName.split(' ')[0] + ': ' + chat.content + '\n';
           })

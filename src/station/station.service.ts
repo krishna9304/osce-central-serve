@@ -43,6 +43,9 @@ import { OpenAiUtil } from 'src/utils/openai.util';
 import { StripeService } from 'src/stripe/stripe.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { join } from 'path';
+import { cwd } from 'process';
+import { readFileSync, writeFileSync } from 'fs';
 
 @Injectable()
 export class StationService {
@@ -645,7 +648,6 @@ export class StationService {
     const station = await this.stationRepository.findOne({
       stationId: session.stationId,
     });
-
     await this.evaluationQueue.add('evaluation', { session, user, station });
   }
 
@@ -655,6 +657,10 @@ export class StationService {
     userName: string,
     station: Station,
   ): Promise<void> {
+    const logFileDir = join(cwd(), 'logs', session.sessionId);
+    const evaluationLogFilePath = join(logFileDir, 'evaluation.log');
+    let evaluationLogFileContent = '';
+
     let totalEvaluationProgressPercentage = 10;
     this.socketService.updateReportGenerationProgress(
       userId,
@@ -716,6 +722,9 @@ export class StationService {
 
     try {
       // ****************Clinical Checklist Marking***************
+      evaluationLogFileContent =
+        '*********** Clinical Checklist Marking **********\n\n' +
+        `role: system\ncontent: ${evaluatorSystemPromptForClinicalChecklist}\n\n`;
       let totalClinicalMarks = 0;
       let securedMarks = 0;
       let userPromptPrefix = `Evaluate the provided transcript of a consultation between Dr. ${userFirstName} and ${patient.patientName}. For each checklist item listed below, respond with "YES" if the item was mentioned during the consultation and "NO" if it was not. Do not include any additional words or explanations in your response: \n`;
@@ -737,7 +746,7 @@ export class StationService {
           ],
           evaluator.openAiModel,
         );
-        console.log(clinicalChecklistItem.question, evalRemark);
+        evaluationLogFileContent += `role: user\ncontent: ${evaluatorUserPrompt}\n\nrole: assistant\ncontent: ${evalRemark}\n\n`;
 
         totalEvaluationProgressPercentage += 0.75;
         this.socketService.updateReportGenerationProgress(
@@ -773,13 +782,18 @@ export class StationService {
           evaluator.nonClinicalChecklist,
           evaluator.additionalInstructions,
         );
-      userPromptPrefix = `Dear expert medical evaluator. Please give your remark in brief, if I ask you to evaluate the consultation between Dr. ${userFirstName} and ${patient.patientName}: \n`;
+
+      evaluationLogFileContent +=
+        '\n*********** Non-Clinical Checklist Marking **********\n\n' +
+        `role: system\ncontent: ${evaluatorSystemPromptForNonClinicalChecklist}\n\n`;
+
+      userPromptPrefix = `Evaluate the provided transcript of a consultation between Dr. ${userFirstName} and ${patient.patientName} for the given Non-Clinical parameters: \n`;
       const markedNonClinicalChecklist: Array<NonClinicalChecklistMarkingItem> =
         [];
       for await (const nonClinicalChecklistItem of evaluator.nonClinicalChecklist) {
         const evaluatorUserPrompt =
           userPromptPrefix +
-          `Give remarks/feedback for the judging criteria - "${nonClinicalChecklistItem.label}"`;
+          `Give accurate constructive remarks/feedback for the judging criteria - "${nonClinicalChecklistItem.label}"`;
         const evalRemark = await this.openAiUtil.getChatCompletion(
           [
             {
@@ -793,6 +807,7 @@ export class StationService {
           ],
           evaluator.openAiModel,
         );
+        evaluationLogFileContent += `role: user\ncontent: ${evaluatorUserPrompt}\n\nrole: assistant\ncontent: ${evalRemark}\n\n`;
 
         totalEvaluationProgressPercentage += 2;
         this.socketService.updateReportGenerationProgress(
@@ -806,6 +821,8 @@ export class StationService {
           remark: evalRemark,
         });
       }
+
+      await writeFileSync(evaluationLogFilePath, evaluationLogFileContent);
       // ********************Findings Marking**********************
 
       let totalFindingsMarks = 0;
@@ -847,6 +864,7 @@ export class StationService {
         '100%',
         0,
       );
+      await writeFileSync(evaluationLogFilePath, evaluationLogFileContent);
       this.socketService.throwError(
         userId,
         'Evaluation report generation failed',
@@ -855,6 +873,29 @@ export class StationService {
         'There is some error caused while producing the evaluation',
         error,
       );
+    } finally {
+      try {
+        for await (const fileType of ['evaluation', 'chat']) {
+          const logFileBuffer = readFileSync(
+            join(logFileDir, `${fileType}.log`),
+          );
+          const logFileUploadName = `${session.sessionId}-${fileType}.log`;
+          await this.azureBlobUtil.uploadUsingBuffer(
+            logFileBuffer,
+            logFileUploadName,
+            false,
+          );
+        }
+        console.log(
+          'Uploaded prompt log files to Azure Blob Storage for session:',
+          session.sessionId,
+        );
+      } catch (error) {
+        console.error(
+          'There is some error caused while uploading the prompt log files to the Azure Blob Storage',
+          error,
+        );
+      }
     }
   }
 

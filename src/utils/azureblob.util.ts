@@ -76,9 +76,14 @@ export class AzureBlobUtil {
     }
   }
 
-  async uploadUsingBuffer(buffer: Buffer, filename: string) {
+  async uploadUsingBuffer(
+    buffer: Buffer,
+    filename: string,
+    useTimeStamp = true,
+  ) {
     try {
-      const blobName = `${Date.now()}-${filename}`;
+      let blobName = filename;
+      if (useTimeStamp) filename = `${Date.now()}-${filename}`;
       const blockBlobClient = this.getBlockBlobClient(blobName);
 
       await blockBlobClient.uploadData(buffer);

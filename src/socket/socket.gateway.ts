@@ -23,6 +23,9 @@ import { User } from 'src/user/schemas/user.schema';
 import { ElevenLabsUtil } from 'src/utils/elevenlabs.util';
 import { OpenAiUtil } from 'src/utils/openai.util';
 import { socketEvents } from './socket.events';
+import { readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { cwd } from 'process';
 
 @WebSocketGateway()
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -237,6 +240,13 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           role: 'assistant',
           content: fullMessage,
         } as Chat);
+
+        const chatLogFilePath = join(cwd(), 'logs', sessionId, 'chat.log');
+        const fileContent = readFileSync(chatLogFilePath);
+        writeFileSync(
+          chatLogFilePath,
+          fileContent + `\nrole: assistant\ncontent: ${fullMessage}\n`,
+        );
       });
 
       opResponse.data.on(socketEvents.error(), (error) => {
@@ -260,6 +270,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     session: ExamSession,
     newMessage: string,
   ): Promise<Array<{ role: string; content: string }>> {
+    const chatLogFilePath = join(cwd(), 'logs', session.sessionId, 'chat.log');
+    const fileContent = readFileSync(chatLogFilePath);
+
     const prompt = getInitalPatientPrompt(user, patient);
     const chats = await this.chatsRepository.find(
       {
@@ -267,11 +280,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       },
       { limit: 10000, page: 1, sort: { created_at: 1 } },
     );
-    chats.sort((a, b) => {
-      return (
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      );
-    });
     const history = chats.map((chat) => {
       return {
         role: chat.role,
@@ -283,6 +291,26 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       role: 'user',
       content: newMessage,
     });
+
+    if (!fileContent.length) {
+      writeFileSync(
+        chatLogFilePath,
+        '********** Conversation transcript with all prompts to GPT **********\n\n',
+      );
+      writeFileSync(
+        chatLogFilePath,
+        prompt
+          .map((p) => {
+            return `role: ${p.role}\ncontent: ${p.content}\n`;
+          })
+          .join('\n'),
+      );
+    } else {
+      writeFileSync(
+        chatLogFilePath,
+        fileContent + `\nrole: user\ncontent: ${newMessage}\n`,
+      );
+    }
     return prompt;
   }
 
