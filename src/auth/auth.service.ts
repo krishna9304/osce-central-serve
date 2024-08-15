@@ -28,7 +28,7 @@ export class AuthService {
       phone: user.phone,
     };
 
-    const accessToken = this.jwtService.sign(tokenPayload, {
+    const token = this.jwtService.sign(tokenPayload, {
       expiresIn: this.configService.get<string>('JWT_EXPIRATION'),
     });
 
@@ -38,11 +38,11 @@ export class AuthService {
 
     const res = new ApiResponse(message, null, 201, {
       user,
-      accessToken,
+      token,
       refreshToken,
     });
     response
-      .cookie('Authentication', accessToken, {
+      .cookie('Authentication', token, {
         httpOnly: true,
         expires: new Date(
           Date.now() + this.configService.get<number>('JWT_EXPIRATION') * 1000,
