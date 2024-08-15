@@ -2,6 +2,8 @@ import { Patient } from 'src/station/schemas/patient.schema';
 import { User } from 'src/user/schemas/user.schema';
 import { Chat } from '../schemas/chat.schema';
 import { NonClinicalChecklistItem } from 'src/station/schemas/evaluator.schema';
+import { FindingStatus, FindingsRecord } from '../schemas/session.schema';
+import { isArray } from 'class-validator';
 
 export const getInitalPatientPrompt = (user: User, patient: Patient) => {
   const patientPrompt = [
@@ -90,6 +92,7 @@ export const getEvaluatorSystemPromptForClinicalChecklist = (
   chats: Array<Chat>,
   initialEvaluationPrompt: string,
   additionalInstructions: string = '',
+  findingsRecord: Array<FindingsRecord>,
 ) => {
   const evaluatorSystemPrompt = `
   **CLinical Checklist Evaluation Instructions**\n
@@ -114,7 +117,25 @@ export const getEvaluatorSystemPromptForClinicalChecklist = (
             ? 'Dr. ' + userFirstName + ': ' + chat.content + '\n'
             : patientName.split(' ')[0] + ': ' + chat.content + '\n';
         })
-  }\n`;
+  }\n\n
+  ${
+    findingsRecord.length
+      ? `Here is the list examinations and investigations which were required to be performed by Dr. ${userFirstName} during the session:\n
+      ${findingsRecord.map(({ finding, value, status, subcategory }, idx) => {
+        return `${idx + 1}. ${finding}:\n
+            ${
+              value && value.length && isArray(value)
+                ? `Info: ${value.map((val) => val.value).join(' - ')}\n`
+                : 'Info: This finding requires either visual examination of patient or is an investigation.\n'
+            }
+            Status: ${
+              status == FindingStatus.COMPLETED
+                ? `Dr. ${userFirstName} performed this ${subcategory} during the session.`
+                : `Dr. ${userFirstName} did not perform this ${subcategory} during the session.`
+            }\n\n`;
+      })}\n`
+      : ''
+  }`;
   return evaluatorSystemPrompt;
 };
 
@@ -125,6 +146,7 @@ export const getEvaluatorSystemPromptForNonClinicalChecklist = (
   initialEvaluationPrompt: string,
   nonClinicalChecklist: Array<NonClinicalChecklistItem>,
   additionalInstructions: string = '',
+  findingsRecord: Array<FindingsRecord>,
 ) => {
   const evaluatorSystemPrompt = `
   **Non-Clinical Checklist Evaluation Instructions**\n
@@ -148,7 +170,25 @@ export const getEvaluatorSystemPromptForNonClinicalChecklist = (
               ? 'Dr. ' + userFirstName + ': ' + chat.content + '\n'
               : patientName.split(' ')[0] + ': ' + chat.content + '\n';
           })
-    }\n`;
+    }\n\n
+    ${
+      findingsRecord.length
+        ? `Here is the list examinations and investigations which were required to be performed by Dr. ${userFirstName} during the session:\n
+        ${findingsRecord.map(({ finding, value, status, subcategory }, idx) => {
+          return `${idx + 1}. ${finding}:\n
+              ${
+                value && value.length && isArray(value)
+                  ? `Info: ${value.map((val) => val.value).join(' - ')}\n`
+                  : 'Info: This finding requires either visual examination of patient or is an investigation.\n'
+              }
+              Status: ${
+                status == FindingStatus.COMPLETED
+                  ? `Dr. ${userFirstName} performed this ${subcategory} during the session.`
+                  : `Dr. ${userFirstName} did not perform this ${subcategory} during the session.`
+              }\n\n`;
+        })}\n`
+        : ''
+    }`;
   return evaluatorSystemPrompt;
 };
 

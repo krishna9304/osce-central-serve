@@ -718,6 +718,7 @@ export class StationService {
         chats,
         evaluator.initialEvaluationPrompt,
         evaluator.additionalInstructions,
+        session.findingsRecord,
       );
 
     try {
@@ -781,6 +782,7 @@ export class StationService {
           evaluator.initialEvaluationPrompt,
           evaluator.nonClinicalChecklist,
           evaluator.additionalInstructions,
+          session.findingsRecord,
         );
 
       evaluationLogFileContent +=
