@@ -15,14 +15,6 @@ export class CreateUserRequest {
   profile_picture: string;
 
   @IsNotEmpty()
-  @IsString()
-  gender: string;
-
-  @IsNotEmpty()
-  @IsDateString()
-  dateOfBirth: string;
-
-  @IsNotEmpty()
   currentYearOfStudy: number;
 
   phone: string;

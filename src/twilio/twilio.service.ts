@@ -15,7 +15,7 @@ export class TwilioService {
   async sendOTP(phoneNumber: string, otp: string): Promise<void> {
     try {
       await this.client.messages.create({
-        body: `Your OTP is ${otp}`,
+        body: `Your OSCE Ai login OTP is - ${otp}. Please do not share this OTP with anyone. This OTP will expire in 30 minutes.\n\n- OSCE Ai Team`,
         from: this.configService.get('TWILIO_PHONE_NUMBER'),
         to: phoneNumber,
       });

@@ -24,13 +24,7 @@ export class User extends AbstractDocument {
   name: string;
 
   @Prop({ default: null })
-  gender: string;
-
-  @Prop({ default: null })
   profile_picture: string;
-
-  @Prop({ default: null })
-  dateOfBirth: string;
 
   @Prop({ required: true })
   @IsMobilePhone('en-IN')
