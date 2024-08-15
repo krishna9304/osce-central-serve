@@ -38,4 +38,19 @@ export class AuthController {
     const res = new APIresp('User authenticated succesfully', null, 200, user);
     return res.getResponse();
   }
+
+  @Post('refresh-token')
+  async refreshToken(
+    @Body('refreshToken') refreshToken: string,
+    @Res() response: Response,
+  ) {
+    const newTokens = await this.authService.refreshToken(refreshToken);
+    const res = new APIresp(
+      'Auth tokens refreshed successfully',
+      null,
+      200,
+      newTokens,
+    );
+    response.status(200).send(res.getResponse());
+  }
 }

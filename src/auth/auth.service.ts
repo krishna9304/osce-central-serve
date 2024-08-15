@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
+import { Types } from 'mongoose';
 import { ApiResponse } from 'src/constants/apiResponse';
 import { TwilioService } from 'src/twilio/twilio.service';
 import { User } from 'src/user/schemas/user.schema';
@@ -27,20 +28,25 @@ export class AuthService {
       phone: user.phone,
     };
 
-    const expires = new Date();
-    expires.setSeconds(
-      expires.getSeconds() + this.configService.get('JWT_EXPIRATION'),
-    );
+    const accessToken = this.jwtService.sign(tokenPayload, {
+      expiresIn: this.configService.get<string>('JWT_EXPIRATION'),
+    });
 
-    const token = this.jwtService.sign(tokenPayload);
+    const refreshToken = this.jwtService.sign(tokenPayload, {
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION'),
+    });
+
     const res = new ApiResponse(message, null, 201, {
       user,
-      token,
+      accessToken,
+      refreshToken,
     });
     response
-      .cookie('Authentication', token, {
+      .cookie('Authentication', accessToken, {
         httpOnly: true,
-        expires,
+        expires: new Date(
+          Date.now() + this.configService.get<number>('JWT_EXPIRATION') * 1000,
+        ),
       })
       .status(200)
       .send(res.getResponse());
@@ -51,6 +57,36 @@ export class AuthService {
       httpOnly: true,
       expires: new Date(),
     });
+  }
+
+  async refreshToken(refreshToken: string) {
+    const decoded = this.jwtService.verify(refreshToken);
+    const tokenPayload: TokenPayload = {
+      userId: decoded.userId,
+      phone: decoded.phone,
+    };
+
+    const user = await this.userService.getUser({
+      _id: new Types.ObjectId(tokenPayload.userId),
+      phone: tokenPayload.phone,
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    const newAccessToken = this.jwtService.sign(tokenPayload, {
+      expiresIn: this.configService.get<string>('JWT_EXPIRATION'),
+    });
+
+    const newRefreshToken = this.jwtService.sign(tokenPayload, {
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION'),
+    });
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
   }
 
   async sendOTP(phone: string): Promise<void> {

@@ -21,6 +21,7 @@ import { TwilioService } from 'src/twilio/twilio.service';
       validationSchema: Joi.object({
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRATION: Joi.number().required(),
+        JWT_REFRESH_EXPIRATION: Joi.number().required(),
         MONGODB_URI: Joi.string().required(),
       }),
       envFilePath: '.env',
