@@ -789,7 +789,7 @@ export class StationService {
         '\n*********** Non-Clinical Checklist Marking **********\n\n' +
         `role: system\ncontent: ${evaluatorSystemPromptForNonClinicalChecklist}\n\n`;
 
-      userPromptPrefix = `Evaluate the provided transcript of a consultation between Dr. ${userFirstName} and ${patient.patientName} for the given Non-Clinical parameters: \n`;
+      userPromptPrefix = `Evaluate the provided transcript of a consultation between Dr. ${userFirstName} and ${patient.patientName} for the given Non-Clinical parameters (Please use a maximum of 100 words to describe your feedback): \n`;
       const markedNonClinicalChecklist: Array<NonClinicalChecklistMarkingItem> =
         [];
       for await (const nonClinicalChecklistItem of evaluator.nonClinicalChecklist) {
