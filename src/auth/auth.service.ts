@@ -29,11 +29,11 @@ export class AuthService {
     };
 
     const token = this.jwtService.sign(tokenPayload, {
-      expiresIn: this.configService.get<string>('JWT_EXPIRATION'),
+      expiresIn: `${this.configService.get<number>('JWT_EXPIRATION')}s`,
     });
 
     const refreshToken = this.jwtService.sign(tokenPayload, {
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION'),
+      expiresIn: `${this.configService.get<number>('JWT_REFRESH_EXPIRATION')}s`,
     });
 
     const res = new ApiResponse(message, null, 201, {
@@ -76,11 +76,11 @@ export class AuthService {
     }
 
     const newAccessToken = this.jwtService.sign(tokenPayload, {
-      expiresIn: this.configService.get<string>('JWT_EXPIRATION'),
+      expiresIn: `${this.configService.get<number>('JWT_EXPIRATION')}s`,
     });
 
     const newRefreshToken = this.jwtService.sign(tokenPayload, {
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION'),
+      expiresIn: `${this.configService.get<number>('JWT_REFRESH_EXPIRATION')}s`,
     });
 
     return {

@@ -30,9 +30,6 @@ import { TwilioService } from 'src/twilio/twilio.service';
     JwtModule.registerAsync({
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: `${configService.get<string>('JWT_EXPIRATION')}s`,
-        },
       }),
       inject: [ConfigService],
     }),
