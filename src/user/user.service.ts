@@ -130,9 +130,11 @@ export class UserService {
   async validateCreateUserRequest(request: Partial<CreateUserRequest>) {
     let exists: any;
     try {
-      exists = await this.usersRepository.exists({
-        $or: [{ email: request.email }, { phone: request.phone }],
-      });
+      if (request.email)
+        exists = await this.usersRepository.exists({
+          $or: [{ email: request.email }, { phone: request.phone }],
+        });
+      else exists = await this.usersRepository.exists({ phone: request.phone });
     } catch (err) {}
 
     if (exists) {

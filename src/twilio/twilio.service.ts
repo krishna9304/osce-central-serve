@@ -20,7 +20,9 @@ export class TwilioService {
         to: phoneNumber,
       });
     } catch (error) {
-      throw new InternalServerErrorException(error);
+      throw new InternalServerErrorException(
+        "Couldn't send OTP. Please try again later.",
+      );
     }
   }
 }

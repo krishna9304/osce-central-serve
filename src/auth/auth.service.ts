@@ -100,8 +100,8 @@ export class AuthService {
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    await this.twilioService.sendOTP(phone, otp);
     await this.userService.updateMetadata(phone, { otp });
+    await this.twilioService.sendOTP(phone, otp);
   }
 
   async verifyOtp(phone: string, otp: string): Promise<User> {
