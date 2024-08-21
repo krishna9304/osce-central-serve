@@ -297,7 +297,9 @@ export class UserService {
       await this.rechargesRepository.delete({ userId });
 
       const user = await this.usersRepository.findOne({ userId });
-      await this.stripeService.deleteCustomer(user.stripeCustomerId);
+
+      if (user.stripeCustomerId)
+        await this.stripeService.deleteCustomer(user.stripeCustomerId);
 
       await this.usersRepository.deleteOne({ userId });
     } catch (err) {
