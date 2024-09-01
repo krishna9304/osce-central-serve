@@ -98,9 +98,10 @@ export class ChatService {
     const patientFindings: FindingsRecord[] = [];
     for await (const finding of patient.findings) {
       if (finding.image) {
-        finding.image = await this.azureBlobUtil.getTemporaryPublicUrl(
+        const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
           finding.image,
         );
+        if (sasURL) finding.image = sasURL as string;
       }
       patientFindings.push({
         id: randomUUID(),
@@ -154,6 +155,10 @@ export class ChatService {
       true,
     );
 
+    const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+      patient.avatar,
+    );
+    if (sasURL) patient.avatar = sasURL as string;
     return {
       ...createdExamSession,
       metadata: {
@@ -161,9 +166,7 @@ export class ChatService {
         stationName: stationId,
         patientAge: patient.age,
         patientSex: patient.sex,
-        avatar: patient.avatar
-          ? await this.azureBlobUtil.getTemporaryPublicUrl(patient.avatar)
-          : null,
+        avatar: patient.avatar,
       },
     };
   }
@@ -275,14 +278,16 @@ export class ChatService {
         stationId: session.stationId,
       });
 
+      const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+        patient.avatar,
+      );
+      if (sasURL) patient.avatar = sasURL as string;
       session.metadata = {
         patientName: patient.patientName,
         stationName: station.stationName,
         patientAge: patient.age,
         patientSex: patient.sex,
-        avatar: patient.avatar
-          ? await this.azureBlobUtil.getTemporaryPublicUrl(patient.avatar)
-          : null,
+        avatar: patient.avatar,
       };
 
       return session;
@@ -323,6 +328,12 @@ export class ChatService {
         const evaluationExists = await this.evaluationRepository.exists({
           associatedSession: session.sessionId,
         });
+
+        const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+          patient.avatar,
+        );
+        if (sasURL) patient.avatar = sasURL as string;
+
         sessionsWithPatientDetails.push({
           ...session,
           metadata: {
@@ -330,9 +341,7 @@ export class ChatService {
             stationName: station.stationName,
             patientAge: patient.age,
             patientSex: patient.sex,
-            avatar: patient.avatar
-              ? await this.azureBlobUtil.getTemporaryPublicUrl(patient.avatar)
-              : null,
+            avatar: patient.avatar,
             evaluated: evaluationExists ? true : false,
           },
         });

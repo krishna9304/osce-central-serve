@@ -405,10 +405,10 @@ export class StationService {
 
       for await (const patient of patientDocs) {
         if (patient.avatar) {
-          const avatarURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+          const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
             patient.avatar,
           );
-          patient.avatar = avatarURL;
+          if (sasURL) patient.avatar = sasURL as string;
         }
       }
 
@@ -536,17 +536,17 @@ export class StationService {
           (patient) => patient.associatedStation === station.stationId,
         );
         if (stationPatients.length) {
+          const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+            stationPatients[0]['avatar'],
+          );
+          if (sasURL) stationPatients[0]['avatar'] = sasURL as string;
           stationsWithMetadata.push({
             ...station,
             metadata: {
               patientName: stationPatients[0]['patientName'],
               patientAge: stationPatients[0]['age'],
               patientSex: stationPatients[0]['sex'],
-              patientAvatar: stationPatients[0]['avatar']
-                ? await this.azureBlobUtil.getTemporaryPublicUrl(
-                    stationPatients[0]['avatar'],
-                  )
-                : null,
+              patientAvatar: stationPatients[0]['avatar'],
             },
           });
         } else {
@@ -579,10 +579,10 @@ export class StationService {
       });
 
       if (patient.avatar) {
-        const avatarURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+        const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
           patient.avatar,
         );
-        patient.avatar = avatarURL;
+        if (sasURL) patient.avatar = sasURL as string;
       }
 
       return patient;
@@ -949,15 +949,19 @@ export class StationService {
       associatedStation: session.stationId,
     });
 
+    if (patient.avatar) {
+      const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+        patient.avatar,
+      );
+      if (sasURL) patient.avatar = sasURL as string;
+    }
     evaluation.metadata = {
       patientId: patient.patientId,
       patientName: patient.patientName,
       patientAge: patient.age,
       patientSex: patient.sex,
       candidateInstructions: station.candidateInstructions,
-      patientAvatar: patient.avatar
-        ? await this.azureBlobUtil.getTemporaryPublicUrl(patient.avatar)
-        : null,
+      patientAvatar: patient.avatar,
     };
 
     return evaluation;

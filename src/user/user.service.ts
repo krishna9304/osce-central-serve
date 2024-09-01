@@ -57,9 +57,10 @@ export class UserService {
     } else user = await this.usersRepository.create(request as User);
 
     if (user.profile_picture) {
-      user.profile_picture = await this.azureBlobUtil.getTemporaryPublicUrl(
+      const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
         user.profile_picture,
       );
+      if (sasURL) user.profile_picture = sasURL as string;
     }
     delete user.metadata;
     if (user.email)
@@ -88,9 +89,10 @@ export class UserService {
     );
 
     if (user.profile_picture) {
-      user.profile_picture = await this.azureBlobUtil.getTemporaryPublicUrl(
+      const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
         user.profile_picture,
       );
+      if (sasURL) user.profile_picture = sasURL as string;
     }
     delete user.metadata;
     return user;
@@ -119,9 +121,10 @@ export class UserService {
     }
     const user: User = await this.usersRepository.findOne(filterQuery);
     if (user.profile_picture) {
-      user.profile_picture = await this.azureBlobUtil.getTemporaryPublicUrl(
+      const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
         user.profile_picture,
       );
+      if (sasURL) user.profile_picture = sasURL as string;
     }
     delete user.metadata;
     return user;
@@ -152,7 +155,10 @@ export class UserService {
     if (file) {
       request.profile_picture = await this.azureBlobUtil.uploadImage(file);
     } else if (request.profile_picture) {
-      await this.azureBlobUtil.getTemporaryPublicUrl(request.profile_picture);
+      const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+        request.profile_picture,
+      );
+      if (!sasURL) delete request.profile_picture;
     }
 
     const updatedUser = await this.usersRepository.findOneAndUpdate(
@@ -164,10 +170,10 @@ export class UserService {
     );
 
     if (updatedUser.profile_picture) {
-      updatedUser.profile_picture =
-        await this.azureBlobUtil.getTemporaryPublicUrl(
-          updatedUser.profile_picture,
-        );
+      const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+        updatedUser.profile_picture,
+      );
+      if (sasURL) updatedUser.profile_picture = sasURL as string;
     }
 
     delete updatedUser.metadata;
@@ -205,7 +211,10 @@ export class UserService {
     if (file)
       request.profile_picture = await this.azureBlobUtil.uploadImage(file);
     else if (request.profile_picture) {
-      await this.azureBlobUtil.getTemporaryPublicUrl(request.profile_picture);
+      const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
+        request.profile_picture,
+      );
+      if (!sasURL) delete request.profile_picture;
     }
     const userCreated = await this.usersRepository.create(request);
     const customer = await this.stripeService.createCustomer({
@@ -239,7 +248,7 @@ export class UserService {
     page: number,
     limit: number,
   ): Promise<User[]> {
-    let users = [];
+    let users: User[] = [];
     if (!filterQuery)
       users = await this.usersRepository.find(
         {},
@@ -262,9 +271,10 @@ export class UserService {
 
     for (let user of users) {
       if (user.profile_picture) {
-        user.profile_picture = await this.azureBlobUtil.getTemporaryPublicUrl(
+        const sasURL = await this.azureBlobUtil.getTemporaryPublicUrl(
           user.profile_picture,
         );
+        if (sasURL) user.profile_picture = sasURL as string;
       }
       delete user.metadata;
     }

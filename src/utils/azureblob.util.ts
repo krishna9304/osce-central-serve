@@ -93,7 +93,7 @@ export class AzureBlobUtil {
     }
   }
 
-  async getTemporaryPublicUrl(filename: string) {
+  async getTemporaryPublicUrl(filename: string): Promise<string | boolean> {
     try {
       const blockBlobClient = this.getBlockBlobClient(filename);
       const blobExists = await blockBlobClient.exists();
@@ -106,9 +106,7 @@ export class AzureBlobUtil {
       });
       return sasUrl;
     } catch (error) {
-      throw new NotFoundException(
-        'Requested blob does not exist: ' + error.message,
-      );
+      return false;
     }
   }
 }
