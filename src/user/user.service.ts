@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -16,6 +18,7 @@ import { EvaluationRepository } from 'src/station/repositories/evaluation.reposi
 import { RechargesRepository } from 'src/stripe/repositories/recharge.repository';
 import { EmailService } from 'src/email/email.service';
 import { EmailTemplate } from 'src/email/templates';
+import { isEmail } from 'class-validator';
 
 @Injectable()
 export class UserService {
@@ -159,6 +162,20 @@ export class UserService {
         request.profile_picture,
       );
       if (!sasURL) delete request.profile_picture;
+    }
+
+    if (request.email) {
+      if (!isEmail(request.email)) {
+        throw new BadRequestException('Please provide a valid email.');
+      }
+
+      const exists = await this.usersRepository.exists({
+        email: request.email,
+        userId: { $ne: user.userId },
+      });
+      if (exists) {
+        throw new ConflictException('Email already in use.');
+      }
     }
 
     const updatedUser = await this.usersRepository.findOneAndUpdate(

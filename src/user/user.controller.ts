@@ -110,7 +110,7 @@ export class UserController {
   @UseInterceptors(FileInterceptor('profilePicture'))
   async updateProfile(
     @UploadedFile() file: Express.Multer.File,
-    @Body() request: Partial<User>,
+    @Body() request: Partial<CreateUserRequest>,
     @CurrentUser() user: User,
   ): Promise<ApiResponseType> {
     const errFields = this.userService.validateUpdateProfileRequest(
@@ -123,7 +123,11 @@ export class UserController {
       errFields.forEach((field) => {
         delete request[field];
       });
-    } else if (user.role === 'admin' && request.userId !== user.userId) {
+    } else if (
+      user.role === 'admin' &&
+      request.userId &&
+      request.userId !== user.userId
+    ) {
       user = await this.userService.getUser({ userId: request.userId });
     }
 
