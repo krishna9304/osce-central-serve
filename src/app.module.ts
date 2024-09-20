@@ -11,6 +11,7 @@ import { StationModule } from './station/station.module';
 import { ChatModule } from './chat/chat.module';
 import { SocketModule } from './socket/socket.module';
 import { EmailModule } from './email/email.module';
+import { CronModule } from './cron/cron.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { EmailModule } from './email/email.module';
     ChatModule,
     SocketModule,
     EmailModule,
+    CronModule,
   ],
   controllers: [AppController],
   providers: [AppService, ConfigService],
