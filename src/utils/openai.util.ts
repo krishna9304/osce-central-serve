@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { OpenAIModel } from 'src/station/schemas/patient.schema';
 
 @Injectable()
 export class OpenAiUtil {

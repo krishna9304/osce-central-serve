@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: osceai-api
+    ports:
+      - '${PORT:-8080}:8080'
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URI=mongodb://mongodb-primary:27017,mongodb-secondary:27017,mongodb-arbiter:27017/oscedb?replicaSet=rs0
+      - REDIS_HOST=redis-primary
+      - REDIS_PORT=6379
+    volumes:
+      - ./src:/usr/app/src
+      - node_modules:/usr/app/node_modules
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+      - redis-primary
+      - redis-replica-1
+      - redis-replica-2
+    networks:
+      - app-network
+
+  # MongoDB Replica Set
+  mongodb-primary:
+    image: mongo:latest
+    container_name: mongodb_primary
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_primary_data:/data/db
+    networks:
+      - app-network
+
+  mongodb-secondary:
+    image: mongo:latest
+    container_name: mongodb_secondary
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    ports:
+      - '27018:27017'
+    volumes:
+      - mongodb_secondary_data:/data/db
+    depends_on:
+      - mongodb-primary
+    networks:
+      - app-network
+
+  mongodb-arbiter:
+    image: mongo:latest
+    container_name: mongodb_arbiter
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    ports:
+      - '27019:27017'
+    volumes:
+      - mongodb_arbiter_data:/data/db
+    depends_on:
+      - mongodb-primary
+    networks:
+      - app-network
+
+  mongo-init:
+    image: mongo:latest
+    container_name: mongo_init
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+    command: >
+      bash -c "sleep 10 && mongosh --host mongodb-primary:27017 --eval '
+      rs.initiate({
+        _id: \"rs0\",
+        members: [
+          {_id: 0, host: \"mongodb-primary:27017\"},
+          {_id: 1, host: \"mongodb-secondary:27017\"},
+          {_id: 2, host: \"mongodb-arbiter:27017\", arbiterOnly: true}
+        ]
+      })
+      '"
+    networks:
+      - app-network
+
+  redis-primary:
+    image: redis:latest
+    container_name: redis_primary
+    command: redis-server --appendonly yes
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_primary_data:/data
+    networks:
+      - app-network
+
+  redis-replica-1:
+    image: redis:latest
+    container_name: redis_replica_1
+    command: redis-server --appendonly yes --replicaof redis-primary 6379
+    ports:
+      - '6380:6379'
+    volumes:
+      - redis_replica1_data:/data
+    depends_on:
+      - redis-primary
+    networks:
+      - app-network
+
+  redis-replica-2:
+    image: redis:latest
+    container_name: redis_replica_2
+    command: redis-server --appendonly yes --replicaof redis-primary 6379
+    ports:
+      - '6381:6379'
+    volumes:
+      - redis_replica2_data:/data
+    depends_on:
+      - redis-primary
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  node_modules:
+  mongodb_primary_data:
+  mongodb_secondary_data:
+  mongodb_arbiter_data:
+  redis_primary_data:
+  redis_replica1_data:
+  redis_replica2_data:
